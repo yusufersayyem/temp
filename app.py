@@ -16,21 +16,21 @@ QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 
 # Step 1: Load raw PDF(s)
 def load_pdf_files(data_path):
-    print("⏳ جاري تحميل ملفات الـ PDF...")
+    print("PDF files are being loaded...")
     loader = PyPDFDirectoryLoader(data_path)
     documents = loader.load()
-    print(f"✅ تم تحميل {len(documents)} صفحة.")
+    print(f"Loaded {len(documents)} Pages.")
     return documents
 
 # Step 2: Create Chunks
 def create_chunks(extracted_data):
-    print("⏳ جاري تقطيع النصوص (Chunking)...")
+    print("Processing (Chunking)...")
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=500,
         chunk_overlap=50
     )
     text_chunks = text_splitter.split_documents(extracted_data)
-    print(f"✅ تم إنشاء {len(text_chunks)} قطعة نصية.")
+    print(f"It was created {len(text_chunks)} text chunks.")
     return text_chunks
 
 # Step 3: Initialize Embedding Model
