@@ -225,7 +225,7 @@ def main():
     st.markdown("""
         <div style="display: flex; align-items: center; gap: 12px; direction: ltr; margin-bottom: 15px;">
             <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white; width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">🤖</div>
-            <h1 style="margin: 0; color: #3b82f6; font-weight: 700; font-size: 22px;">المجيب الآلي (تربية نينوى & جامعة الموصل)</h1>
+            <h1 style="margin: 0; color: #3b82f6; font-weight: 700; font-size: 22px;">المجيب الآلي لتربية نينوى وجامعة الموصل</h1>
         </div>
     """, unsafe_allow_html=True)
 
