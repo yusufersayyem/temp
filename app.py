@@ -186,7 +186,7 @@ def process_rag_response(user_query):
         # عرض الكاروسيل كل 3 إجابات
         if st.session_state.bot_response_count % 3 == 0:
             with st.chat_message("assistant", avatar=AD_AVATAR):
-                st.write("📢 **عروض وإعلانات رعاية المنصة:**")
+                st.write("اعلانات**")
                 render_ads_carousel()
             
             st.session_state.messages.append({'role': 'assistant', 'type': 'carousel'})
@@ -196,7 +196,7 @@ def process_rag_response(user_query):
 
 def main():
     st.set_page_config(
-        page_title="المجيب الآلي - تربية نينوى وجامعة الموصل",
+        page_title="المجيب الآلي",
         page_icon="🤖",
         layout="centered",
         initial_sidebar_state="collapsed"
