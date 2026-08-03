@@ -33,22 +33,6 @@ ADS_DATA = [
     }
 ]
 
-def get_image_src(image_path):
-    """تحويل الصورة المحلية إلى Base64 أو إرجاع رابط URL المباشر"""
-    if os.path.exists(image_path):
-        try:
-            with open(image_path, "rb") as img_file:
-                encoded_string = base64.b64encode(img_file.read()).decode()
-            ext = os.path.splitext(image_path)[1].replace(".", "").lower()
-            mime_types = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp"}
-            mime_type = mime_types.get(ext, "image/jpeg")
-            return f"data:{mime_type};base64,{encoded_string}"
-        except Exception:
-            return "https://picsum.photos/400/200"
-    elif image_path.startswith("http"):
-        return image_path
-    return "https://picsum.photos/400/200"
-
 def load_rag_chain():
     embedding_model = MistralAIEmbeddings(model="mistral-embed")
     vectorstore = FAISS.load_local(
@@ -94,69 +78,41 @@ async def on_chat_start():
     cl.user_session.set("response_count", 0)
 
 async def send_ad_card():
-    """عرض الإعلانات في شبكة كارتات أفقية/شبكية باستعمال CSS Flexbox"""
-    # اختيار إعلانين كحد أقصى للظهور بجانب بعضهما، أو اختيار كل الإعلانات حسب رغبتك
+    """عرض الإعلانات باستخدام عنصر cl.Image المدمج في Chainlit لتجنب مشكلة الـ Base64"""
     selected_ads = random.sample(ADS_DATA, min(2, len(ADS_DATA)))
     
-    cards_html = ""
-    for ad in selected_ads:
-        img_src = get_image_src(ad["image_path"])
-        cards_html += f"""
-        <div style="
-            flex: 1 1 180px;
-            max-width: 220px;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            overflow: hidden;
-            background: #ffffff;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        ">
-            <div style="position: relative; height: 110px; overflow: hidden; background: #f1f5f9;">
-                <img src="{img_src}" style="width: 100%; height: 100%; object-fit: cover; display: block;" />
-            </div>
-            <div style="padding: 10px; display: flex; flex-direction: column; flex-grow: 1; justify-content: space-between;">
-                <h4 style="margin: 0 0 10px 0; color: #0f172a; font-size: 12px; font-weight: 700; line-height: 1.4;">{ad['title']}</h4>
-                <a href="{ad['url']}" target="_blank" style="
-                    display: block;
-                    text-align: center;
-                    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-                    color: #ffffff !important;
-                    text-decoration: none !important;
-                    padding: 6px 10px;
-                    border-radius: 6px;
-                    font-size: 11px;
-                    font-weight: 600;
-                ">
-                    زيارة التفاصيل 👈
-                </a>
-            </div>
-        </div>
-        """
-
-    grid_container = f"""
-    <div style="
-        direction: rtl;
-        text-align: right;
-        font-family: 'Cairo', system-ui, sans-serif;
-        margin: 10px 0;
-        width: 100%;
-    ">
-        <div style="font-size: 12px; color: #64748b; font-weight: bold; margin-bottom: 8px;">📢 عروض وإعلانات رعاية المنصة:</div>
-        <div style="
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            align-items: stretch;
-        ">
-            {cards_html}
-        </div>
-    </div>
-    """
+    elements = []
+    ad_texts = []
     
-    await cl.Message(content=grid_container).send()
+    for idx, ad in enumerate(selected_ads):
+        image_path = ad["image_path"]
+        name = f"ad_image_{idx}"
+        
+        # إذا كانت الصورة محلياً وموجودة، نستخدم cl.Image
+        if os.path.exists(image_path):
+            elements.append(
+                cl.Image(name=name, path=image_path, display="inline")
+            )
+        else:
+            # إذا كان رابطاً خارجيًا أو غير موجود
+            fallback_url = image_path if image_path.startswith("http") else "https://picsum.photos/400/200"
+            elements.append(
+                cl.Image(name=name, url=fallback_url, display="inline")
+            )
+
+        # تجهيز نص الكارت المنسق بـ Markdown
+        ad_texts.append(
+            f"### 📢 {ad['title']}\n"
+            f"[👉 اضغط هنا لزيارة التفاصيل]({ad['url']})"
+        )
+    
+    content_body = "\n---\n".join(ad_texts)
+    full_content = f"**📢 عروض وإعلانات رعاية المنصة:**\n\n{content_body}"
+
+    await cl.Message(
+        content=full_content,
+        elements=elements
+    ).send()
 
 @cl.on_message
 async def on_message(message: cl.Message):
@@ -176,7 +132,7 @@ async def on_message(message: cl.Message):
         count = cl.user_session.get("response_count") + 1
         cl.user_session.set("response_count", count)
         
-        # 🎯 إظهار الإعلانات التفاعلية الشبكية عند تكرار الشرط
+        # 🎯 إظهار الإعلانات التفاعلية عند تكرار الشرط
         if count % 2 == 0:
             await send_ad_card()
         
