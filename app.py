@@ -52,7 +52,7 @@ def get_base64_image(image_path):
         return "https://picsum.photos/500/200"
 
 def build_ads_html():
-    """توليد كود HTML الكامل لبيئة iframe"""
+    """توليد كود HTML الكامل للسلايدر"""
     slides_html = ""
     for ad in ADS_DATA:
         img_src = get_base64_image(ad["image"])
@@ -120,10 +120,11 @@ def build_ads_html():
             <div class="swiper-pagination"></div>
         </div>
 
+        <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"></script>
         <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
         <script>
-            document.addEventListener("DOMContentLoaded", function() {{
-                var swiper = new Swiper(".mySwiper", {{
+            window.onload = function() {{
+                new Swiper(".mySwiper", {{
                     slidesPerView: "auto",
                     spaceBetween: 15,
                     grabCursor: true,
@@ -136,7 +137,7 @@ def build_ads_html():
                         clickable: true,
                     }},
                 }});
-            }});
+            }};
         </script>
     </body>
     </html>
@@ -170,33 +171,19 @@ def setup_rag_chain():
 
 
 async def send_ads_carousel(header_text: str):
-    """دالة مساعدة لإرسال الكاروسيل بصورة مستقلة عبر CustomElement"""
+    """إرسال الإعلانات باستخدام عنصر cl.Html لتجنب مشكلة الـ Raw Code"""
     html_content = build_ads_html()
     
-    # تحويل كود الـ HTML إلى Base64 لتمريره للـ Iframe دون مشاكل التنسيق
+    # تحويل الصفحة إلى iframe متوافق ليعمل داخل Chainlit بدون مشاكل Escaping
     encoded_html = base64.b64encode(html_content.encode('utf-8')).decode('utf-8')
-    iframe_src = f"data:text/html;base64,{encoded_html}"
+    iframe_html = f'<iframe src="data:text/html;base64,{encoded_html}" style="width:100%; height:230px; border:none; border-radius:12px;"></iframe>'
 
-    element = cl.CustomElement(
-        name="ad_carousel",
-        props={"src": iframe_src},
-        # كود تفاعلي بسيط لتصيير ה-Iframe بارتفاع وتجاوب ممتازين
-        js="""
-        function CustomElement({ props }) {
-            return (
-                <iframe 
-                    src={props.src} 
-                    style={{ width: '100%', height: '230px', border: 'none', borderRadius: '12px' }} 
-                    title="Ads Carousel"
-                />
-            );
-        }
-        """
-    )
+    # استخدام cl.Html لتصيير العنصر بدلاً من Markdown
+    html_element = cl.Html(content=iframe_html)
 
     await cl.Message(
         content=header_text,
-        elements=[element],
+        elements=[html_element],
         author="الإعلانات"
     ).send()
 
