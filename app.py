@@ -24,17 +24,17 @@ ADS_DATA = [
     {
         "title": "مطعم فاخر - عروض خاصة",
         "url": "https://voyager.mynu.app/restaurant/675af6c4fc92f8671caef3cc",
-        "image_path": "ads/ad1.webp"
+        "image_path": "https://ik.imagekit.io/63rncvror/ad1.webp?updatedAt=1785601369756"
     },
     {
         "title": "شركة نجمة الموصل",
         "url": "https://www.facebook.com/najmatalmosulco/",
-        "image_path": "ads/ad2.webp"
+        "image_path": "https://ik.imagekit.io/63rncvror/ad7.webp?updatedAt=1785601364077"
     },
     {
         "title": "جامعة النور الأهلية",
         "url": "https://alnoor.edu.iq/ar/",
-        "image_path": "ads/ad10.webp"
+        "image_path": "https://ik.imagekit.io/63rncvror/ad7.webp?updatedAt=1785601364077"
     }
 ]
 
