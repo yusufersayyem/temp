@@ -3,7 +3,7 @@ import random
 from dotenv import load_dotenv
 import chainlit as cl
 
-# 🟢 التعديل: استيراد Qdrant بدلاً من FAISS
+# 🟢 استيراد Qdrant
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 
@@ -91,38 +91,68 @@ async def on_chat_start():
     cl.user_session.set("response_count", 0)
 
 async def send_ad_card():
-    """عرض الإعلانات باستخدام عنصر cl.Image المدمج في Chainlit"""
-    selected_ads = random.sample(ADS_DATA, min(2, len(ADS_DATA)))
-    
-    elements = []
-    ad_texts = []
-    
-    for idx, ad in enumerate(selected_ads):
-        image_path = ad["image_path"]
-        name = f"ad_image_{idx}"
-        
-        if os.path.exists(image_path):
-            elements.append(
-                cl.Image(name=name, path=image_path, display="inline")
-            )
-        else:
-            fallback_url = image_path if image_path.startswith("http") else "https://picsum.photos/400/200"
-            elements.append(
-                cl.Image(name=name, url=fallback_url, display="inline")
-            )
+    """عرض الإعلانات على شكل معرض متحرك/قابل للتمرير أفقيًا (Carousel)"""
+    cards_html = ""
+    for ad in ADS_DATA:
+        cards_html += f"""
+        <div style="
+            flex: 0 0 200px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 8px;
+            background: #ffffff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+            text-align: center;
+            box-sizing: border-box;
+        ">
+            <a href="{ad['url']}" target="_blank" style="text-decoration: none; color: inherit;">
+                <img src="{ad['image_path']}" style="
+                    width: 100%;
+                    height: 100px;
+                    object-fit: cover;
+                    border-radius: 6px;
+                    margin-bottom: 6px;
+                " />
+                <div style="
+                    font-size: 13px;
+                    font-weight: bold;
+                    color: #0066cc;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                ">
+                    {ad['title']}
+                </div>
+                <div style="
+                    font-size: 11px;
+                    color: #666;
+                    margin-top: 3px;
+                ">
+                    🔗 اضغط للتفاصيل
+                </div>
+            </a>
+        </div>
+        """
 
-        ad_texts.append(
-            f"### 📢 {ad['title']}\n"
-            f"[👉 اضغط هنا لزيارة التفاصيل]({ad['url']})"
-        )
-    
-    content_body = "\n---\n".join(ad_texts)
-    full_content = f"**📢 عروض وإعلانات رعاية المنصة:**\n\n{content_body}"
+    carousel_html = f"""
+    <div style="margin-top: 10px; font-family: sans-serif;">
+        <p style="font-weight: bold; font-size: 14px; margin-bottom: 8px; color: #333;">
+            📢 <b>عروض ورعاية المنصة:</b>
+        </p>
+        <div style="
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 5px 2px 10px 2px;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        ">
+            {cards_html}
+        </div>
+    </div>
+    """
 
-    await cl.Message(
-        content=full_content,
-        elements=elements
-    ).send()
+    await cl.Message(content=carousel_html).send()
 
 @cl.on_message
 async def on_message(message: cl.Message):
@@ -141,6 +171,7 @@ async def on_message(message: cl.Message):
         count = cl.user_session.get("response_count") + 1
         cl.user_session.set("response_count", count)
         
+        # عرض معرض الإعلانات كل إجابتين
         if count % 2 == 0:
             await send_ad_card()
         
