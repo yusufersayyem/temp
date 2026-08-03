@@ -4,7 +4,7 @@ import random
 from dotenv import load_dotenv
 import chainlit as cl
 
-# مكتبات LangChain و Qdrant الحديثة (Async)
+# مكتبات LangChain و Qdrant
 from qdrant_client import AsyncQdrantClient
 from langchain_qdrant import QdrantVectorStore
 from langchain_mistralai import MistralAIEmbeddings, ChatMistralAI
@@ -36,7 +36,7 @@ ADS_DATA = [
 
 
 def get_base64_image(image_path):
-    """تحويل الصور إلى Base64 للعرض المباشر"""
+    """تحويل الصور إلى Base64 للعرض المباشر داخل الواجهة"""
     try:
         if os.path.exists(image_path):
             with open(image_path, "rb") as image_file:
@@ -52,10 +52,7 @@ def get_base64_image(image_path):
 
 
 def generate_ads_html_cards(ads_list):
-    """
-    توليد بطاقات إعلانية مصممة بنفس الطابع الزجاجي (Glassmorphic Cards)
-    ومناسبة لشبكة Chainlit
-    """
+    """توليد بطاقات إعلانية مصممة بنفس الطابع الزجاجي (Glassmorphic Cards) ومناسبة لبيئة Chainlit"""
     cards_html = """
     <style>
         .ads-container {
@@ -66,9 +63,9 @@ def generate_ads_html_cards(ads_list):
             direction: rtl;
         }
         .ad-card {
-            min-width: 200px;
-            max-width: 220px;
-            height: 120px;
+            min-width: 190px;
+            max-width: 210px;
+            height: 115px;
             border-radius: 12px;
             position: relative;
             overflow: hidden;
@@ -96,7 +93,7 @@ def generate_ads_html_cards(ads_list):
             position: absolute;
             bottom: 0; left: 0; right: 0;
             z-index: 3;
-            background: rgba(0,0,0,0.6);
+            background: rgba(0,0,0,0.65);
             color: white;
             font-size: 11px;
             padding: 4px 8px;
@@ -121,11 +118,11 @@ def generate_ads_html_cards(ads_list):
     return cards_html
 
 
-async def build_rag_chain():
-    """تجهيز الـ Async RAG Chain لسرعة الاستجابة تحت الضغط العالي"""
+def build_rag_chain():
+    """تجهيز الـ RAG Chain بالصيغة التزامنية (Sync) لتفادي أخطاء الـ Coroutine عند البناء"""
     embedding_model = MistralAIEmbeddings(model="mistral-embed")
     
-    # استخدام AsyncQdrantClient لتفادي حظر الـ Threads مع آلاف المستخدمين
+    # استخدام AsyncQdrantClient للاتصال بقاعدة البيانات
     async_client = AsyncQdrantClient(
         url=QDRANT_URL,
         api_key=QDRANT_API_KEY
@@ -171,8 +168,8 @@ async def on_chat_start():
     # تهيئة عداد الإجابات لكل جلسة مستخدم بحد ذاتها
     cl.user_session.set("bot_response_count", 0)
     
-    # بناء الـ RAG Chain وتخزينه بالسرعة العالية بالذاكرة الخاصة بالمستخدم
-    rag_chain = await build_rag_chain()
+    # بناء الـ RAG Chain بدون await لتجنب الخطأ
+    rag_chain = build_rag_chain()
     cl.user_session.set("rag_chain", rag_chain)
 
     # 1. عرض الرسالة الترحيبية الهامة
@@ -183,7 +180,7 @@ async def on_chat_start():
     🌟 **إعلانات ورعاة المنصة:**
     """
     
-    # 2. إرسال الإعلانات الترحيبية في بداية الشات
+    # 2. إرسال الإعلانات الترحيبية في بداية المحادثة
     ads_html = generate_ads_html_cards(ADS_DATA[:5]) # عرض أول 5 إعلانات
     await cl.Message(
         content=welcome_message + ads_html,
@@ -193,33 +190,33 @@ async def on_chat_start():
 
 @cl.on_message
 async def on_message(message: cl.Message):
-    """دالة معالجة الاستفسارات وإرجاع الإجابات بالبث اللحظي"""
+    """دالة معالجة الاستفسارات وإرجاع الإجابات بالبث اللحظي (Streaming)"""
     rag_chain = cl.user_session.get("rag_chain")
     bot_response_count = cl.user_session.get("bot_response_count", 0)
     
-    # إنشاء رسالة فارغة لتأكيد بدء الرد (Streaming Response)
+    # إنشاء رسالة فارغة لبدء الرد المباشر
     msg = cl.Message(content="")
     await msg.send()
 
     try:
-        # تنفيذ استرجاع البيانات والـ LLM بشكل Async
+        # تنفيذ استرجاع البيانات والـ LLM عبر البث اللحظي Async Stream
         async for chunk in rag_chain.astream({"input": message.content}):
             if "answer" in chunk:
                 await msg.stream_token(chunk["answer"])
 
         await msg.update()
 
-        # تحديث العداد الخاص بالإجابات
+        # تحديث عداد الإجابات في جلسة المستخدم
         bot_response_count += 1
         cl.user_session.set("bot_response_count", bot_response_count)
 
-        # عرض شريط/بطاقات الإعلانات بعد كل 3 إجابات (كما في كودك السابق)
+        # عرض بطاقات الإعلانات بشكل عشوائي بعد كل 3 إجابات
         if bot_response_count % 3 == 0:
             random_ads = random.sample(ADS_DATA, min(4, len(ADS_DATA)))
             ads_html = generate_ads_html_cards(random_ads)
             
             await cl.Message(
-                content=f"📢 **عروض وإعلانات رعاية المنصة:**\n\n" + ads_html,
+                content="📢 **عروض وإعلانات رعاية المنصة:**\n\n" + ads_html,
                 author="الإعلانات"
             ).send()
 
