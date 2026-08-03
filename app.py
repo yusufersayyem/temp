@@ -3,7 +3,7 @@ import random
 from dotenv import load_dotenv
 import chainlit as cl
 
-# 🟢 استيراد Qdrant
+# 🟢 استيراد Qdrant و LangChain
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 
@@ -39,15 +39,14 @@ ADS_DATA = [
 ]
 
 def load_rag_chain():
+    """تحميل سلسلة الـ RAG مع Qdrant و Mistral"""
     embedding_model = MistralAIEmbeddings(model="mistral-embed")
     
-    # 🟢 الاتصال بـ Qdrant Cloud
     client = QdrantClient(
         url=QDRANT_URL,
         api_key=QDRANT_API_KEY
     )
     
-    # 🟢 تحميل الـ VectorStore من Qdrant
     vectorstore = QdrantVectorStore(
         client=client,
         collection_name=COLLECTION_NAME,
@@ -80,38 +79,27 @@ def load_rag_chain():
         combine_docs_chain
     )
 
-@cl.on_chat_start
-async def on_chat_start():
-    await cl.Message(
-        content="مرحباً بك! 🤖 أنا المساعد الذكي لمديرية تربية نينوى وجامعة الموصل. كيف يمكنني مساعدتك اليوم؟"
-    ).send()
-    
-    rag_chain = load_rag_chain()
-    cl.user_session.set("rag_chain", rag_chain)
-    cl.user_session.set("response_count", 0)
+# ==================== 📢 نظام الإعلانات المطور ====================
 
-# ==================== 📢 نظام الإعلانات التفاعلي (Chainlit Actions) ====================
-
-async def build_ad_message(ad_index: int = 0) -> cl.Message:
-    """بناء كائن الرسالة مع الصورة وأزرار التصفح بناءً على رقم الإعلان"""
+def get_ad_payload(ad_index: int):
+    """توليد محتوى وعناصر الإعلان بناءً على الفهرس"""
     total_ads = len(ADS_DATA)
-    current_index = ad_index % total_ads  # التدوير التلقائي
+    current_index = ad_index % total_ads
     ad = ADS_DATA[current_index]
 
     content = (
-        f"📢 **رعاية المنصة ({current_index + 1}/{total_ads})**\n\n"
-        f"### 🔹 {ad['title']}\n"
-        f"[👉 اضغط هنا لزيارة التفاصيل والرابط الرسمي]({ad['url']})"
+        f"--- \n"
+        f"✨ **رعاية إعلانية ({current_index + 1}/{total_ads})**\n\n"
+        f"### 🔹 [{ad['title']}]({ad['url']})\n"
+        f"👉 [اضغط هنا لزيارة التفاصيل والرابط الرسمي]({ad['url']})"
     )
 
-    # عنصر الصورة
     image_element = cl.Image(
         name=f"ad_img_{current_index}",
         url=ad["image_path"],
         display="inline"
     )
 
-    # أزرار التنقل التفاعلية
     actions = [
         cl.Action(
             name="change_ad", 
@@ -125,30 +113,32 @@ async def build_ad_message(ad_index: int = 0) -> cl.Message:
         )
     ]
 
-    return cl.Message(
-        content=content,
-        elements=[image_element],
-        actions=actions
-    )
-
-async def send_ad_card():
-    """إرسال بطاقة الإعلان التفاعلية الأولى"""
-    msg = await build_ad_message(0)
-    await msg.send()
+    return content, [image_element], actions
 
 @cl.action_callback("change_ad")
 async def on_change_ad(action: cl.Action):
-    """مستمع الضغط على الأزرار: تحديث الإعلان الحالي في نفس الرسالة أو إرسال إعلان محدث"""
+    """تحديث نفس رسالة الإعلان عند الضغط على أزرار التصفح دون إغراق الشات"""
     target_index = int(action.value)
+    content, elements, actions = get_ad_payload(target_index)
     
-    # حذف أزرار الرسالة القديمة لتجنب الضغط المكرر
-    await action.remove()
-    
-    # إرسال الإعلان المصرّف الجديد
-    msg = await build_ad_message(target_index)
-    await msg.send()
+    # الحصول على الرسالة الحالية وتحديث محتواها وأزرارها في مكانها
+    message = action.for_id
+    if message:
+        msg = cl.Message(id=message, content=content, elements=elements, actions=actions)
+        await msg.update()
 
-# ======================================================================================
+# ==================== 💬 أحداث الشات ====================
+
+@cl.on_chat_start
+async def on_chat_start():
+    await cl.Message(
+        content="مرحباً بك! 🤖 أنا المساعد الذكي لمديرية تربية نينوى وجامعة الموصل. كيف يمكنني مساعدتك اليوم؟"
+    ).send()
+    
+    # تحميل الـ RAG Chain وتخزينها في جلسة المستخدم
+    rag_chain = load_rag_chain()
+    cl.user_session.set("rag_chain", rag_chain)
+    cl.user_session.set("response_count", 0)
 
 @cl.on_message
 async def on_message(message: cl.Message):
@@ -158,19 +148,29 @@ async def on_message(message: cl.Message):
     await msg.send()
     
     try:
+        # بث الإجابة تدريجياً (Streaming)
         async for chunk in rag_chain.astream({"input": message.content}):
             if "answer" in chunk:
                 await msg.stream_token(chunk["answer"])
                 
         await msg.update()
         
+        # زيادة عداد الإجابات
         count = cl.user_session.get("response_count") + 1
         cl.user_session.set("response_count", count)
         
-        # عرض بطاقة الإعلانات التفاعلية كل إجابتين
+        # عرض بطاقة إعلانية تفاعلية مستقيلّة كل إجابتين (مع اختيار عشوائي للبداية)
         if count % 2 == 0:
-            await send_ad_card()
+            random_start_index = random.randint(0, len(ADS_DATA) - 1)
+            content, elements, actions = get_ad_payload(random_start_index)
+            
+            ad_msg = cl.Message(
+                content=content,
+                elements=elements,
+                actions=actions
+            )
+            await ad_msg.send()
         
     except Exception as e:
-        msg.content = f"حدث خطأ أثناء معالجة الطلب: {str(e)}"
+        msg.content = f"⚠️ حدث خطأ أثناء معالجة الطلب: {str(e)}"
         await msg.update()
