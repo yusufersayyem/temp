@@ -52,7 +52,7 @@ def get_base64_image(image_path):
         return "https://picsum.photos/500/200"
 
 def build_ads_html():
-    """توليد كود HTML لعرض الكاروسيل"""
+    """توليد كود HTML الكامل لبيئة iframe"""
     slides_html = ""
     for ad in ADS_DATA:
         img_src = get_base64_image(ad["image"])
@@ -69,67 +69,77 @@ def build_ads_html():
         """
 
     return f"""
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
-    <style>
-        .swiper {{ width: 100%; padding: 10px 5px 30px 5px; }}
-        .swiper-slide {{ width: 260px; }}
-        .ad-card-link {{ text-decoration: none; display: block; }}
-        .ad-card {{
-            position: relative;
-            width: 100%;
-            aspect-ratio: 16 / 9;
-            border-radius: 14px;
-            overflow: hidden;
-            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
-            transition: transform 0.25s ease, box-shadow 0.25s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #0f172a;
-        }}
-        .ad-card:hover {{
-            transform: translateY(-5px) scale(1.02);
-            box-shadow: 0 10px 24px rgba(0,0,0,0.22);
-        }}
-        .ad-bg-blur {{
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; filter: blur(14px) brightness(0.85);
-            transform: scale(1.2); z-index: 1;
-        }}
-        .glass-overlay {{
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(4px);
-            border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 14px; z-index: 2;
-        }}
-        .ad-main-img {{
-            position: relative; z-index: 3; max-width: 100%; max-height: 100%;
-            object-fit: contain; display: block; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.25));
-        }}
-    </style>
-
-    <div class="swiper mySwiper">
-        <div class="swiper-wrapper">
-            {slides_html}
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+        <style>
+            body {{ margin: 0; padding: 0; background: transparent; overflow: hidden; }}
+            .swiper {{ width: 100%; padding: 10px 5px 30px 5px; }}
+            .swiper-slide {{ width: 260px; }}
+            .ad-card-link {{ text-decoration: none; display: block; }}
+            .ad-card {{
+                position: relative;
+                width: 100%;
+                aspect-ratio: 16 / 9;
+                border-radius: 14px;
+                overflow: hidden;
+                box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+                transition: transform 0.25s ease, box-shadow 0.25s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: #0f172a;
+            }}
+            .ad-card:hover {{
+                transform: translateY(-5px) scale(1.02);
+                box-shadow: 0 10px 24px rgba(0,0,0,0.22);
+            }}
+            .ad-bg-blur {{
+                position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                object-fit: cover; filter: blur(14px) brightness(0.85);
+                transform: scale(1.2); z-index: 1;
+            }}
+            .glass-overlay {{
+                position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(4px);
+                border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 14px; z-index: 2;
+            }}
+            .ad-main-img {{
+                position: relative; z-index: 3; max-width: 100%; max-height: 100%;
+                object-fit: contain; display: block; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.25));
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="swiper mySwiper">
+            <div class="swiper-wrapper">
+                {slides_html}
+            </div>
+            <div class="swiper-pagination"></div>
         </div>
-        <div class="swiper-pagination"></div>
-    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-    <script>
-        var swiper = new Swiper(".mySwiper", {{
-            slidesPerView: "auto",
-            spaceBetween: 15,
-            grabCursor: true,
-            autoplay: {{
-                delay: 2800,
-                disableOnInteraction: false,
-            }},
-            pagination: {{
-                el: ".swiper-pagination",
-                clickable: true,
-            }},
-        }});
-    </script>
+        <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {{
+                var swiper = new Swiper(".mySwiper", {{
+                    slidesPerView: "auto",
+                    spaceBetween: 15,
+                    grabCursor: true,
+                    autoplay: {{
+                        delay: 2800,
+                        disableOnInteraction: false,
+                    }},
+                    pagination: {{
+                        el: ".swiper-pagination",
+                        clickable: true,
+                    }},
+                }});
+            }});
+        </script>
+    </body>
+    </html>
     """
 
 def setup_rag_chain():
@@ -159,26 +169,53 @@ def setup_rag_chain():
     return create_retrieval_chain(vectorstore.as_retriever(search_kwargs={'k': 3}), combine_docs_chain)
 
 
+async def send_ads_carousel(header_text: str):
+    """دالة مساعدة لإرسال الكاروسيل بصورة مستقلة عبر CustomElement"""
+    html_content = build_ads_html()
+    
+    # تحويل كود الـ HTML إلى Base64 لتمريره للـ Iframe دون مشاكل التنسيق
+    encoded_html = base64.b64encode(html_content.encode('utf-8')).decode('utf-8')
+    iframe_src = f"data:text/html;base64,{encoded_html}"
+
+    element = cl.CustomElement(
+        name="ad_carousel",
+        props={"src": iframe_src},
+        # كود تفاعلي بسيط لتصيير ה-Iframe بارتفاع وتجاوب ممتازين
+        js="""
+        function CustomElement({ props }) {
+            return (
+                <iframe 
+                    src={props.src} 
+                    style={{ width: '100%', height: '230px', border: 'none', borderRadius: '12px' }} 
+                    title="Ads Carousel"
+                />
+            );
+        }
+        """
+    )
+
+    await cl.Message(
+        content=header_text,
+        elements=[element],
+        author="الإعلانات"
+    ).send()
+
+
 # ------------------ أحداث Chainlit ------------------
 
 @cl.on_chat_start
 async def on_chat_start():
     """يتم استدعاؤها عند بدء المحادثة مع المستخدم"""
-    # تهيئة الـ RAG Chain وحفظها في الجلسة الخاصة بالمستخدم
     rag_chain = setup_rag_chain()
     cl.user_session.set("rag_chain", rag_chain)
     cl.user_session.set("bot_response_count", 0)
 
-    # رسالة الترحيب + عرض الكاروسيل في البداية
+    # رسالة الترحيب
     welcome_text = "🤖 **أهلاً بك في المجيب الآلي لمديرية تربية نينوى وجامعة الموصل**\n\nكيف يمكنني مساعدتك اليوم؟"
     await cl.Message(content=welcome_text).send()
 
     # عرض الإعلانات المتميزة في البداية
-    ads_html = build_ads_html()
-    await cl.Message(
-        content=f"🌟 **إعلانات متميزة:**\n\n{ads_html}",
-        author="الإعلانات"
-    ).send()
+    await send_ads_carousel("🌟 **إعلانات متميزة:**")
 
 
 @cl.on_message
@@ -187,30 +224,22 @@ async def on_message(message: cl.Message):
     rag_chain = cl.user_session.get("rag_chain")
     bot_response_count = cl.user_session.get("bot_response_count", 0)
 
-    # إنشاء رسالة فرعية لانتظار الرد (Loader)
     msg = cl.Message(content="")
     await msg.send()
 
     try:
-        # تشغيل RAG Chain للحصول على الرد
         response = await rag_chain.ainvoke({'input': message.content})
         answer = response.get("answer", "عذراً، لم أتمكن من الحصول على إجابة.")
         
-        # تحديث الرسالة بالإجابة النهائية
         msg.content = answer
         await msg.update()
 
-        # تحديث عداد الإجابات
         bot_response_count += 1
         cl.user_session.set("bot_response_count", bot_response_count)
 
         # عرض الكاروسيل كل 3 إجابات
         if bot_response_count % 3 == 0:
-            ads_html = build_ads_html()
-            await cl.Message(
-                content=f"📢 **عروض وإعلانات رعاية المنصة:**\n\n{ads_html}",
-                author="الإعلانات"
-            ).send()
+            await send_ads_carousel("📢 **عروض وإعلانات رعاية المنصة:**")
 
     except Exception as e:
         msg.content = f"حدث خطأ أثناء معالجة الطلب: {str(e)}"
