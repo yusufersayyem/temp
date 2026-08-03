@@ -90,69 +90,65 @@ async def on_chat_start():
     cl.user_session.set("rag_chain", rag_chain)
     cl.user_session.set("response_count", 0)
 
+# ==================== 📢 نظام الإعلانات التفاعلي (Chainlit Actions) ====================
+
+async def build_ad_message(ad_index: int = 0) -> cl.Message:
+    """بناء كائن الرسالة مع الصورة وأزرار التصفح بناءً على رقم الإعلان"""
+    total_ads = len(ADS_DATA)
+    current_index = ad_index % total_ads  # التدوير التلقائي
+    ad = ADS_DATA[current_index]
+
+    content = (
+        f"📢 **رعاية المنصة ({current_index + 1}/{total_ads})**\n\n"
+        f"### 🔹 {ad['title']}\n"
+        f"[👉 اضغط هنا لزيارة التفاصيل والرابط الرسمي]({ad['url']})"
+    )
+
+    # عنصر الصورة
+    image_element = cl.Image(
+        name=f"ad_img_{current_index}",
+        url=ad["image_path"],
+        display="inline"
+    )
+
+    # أزرار التنقل التفاعلية
+    actions = [
+        cl.Action(
+            name="change_ad", 
+            value=str((current_index - 1) % total_ads), 
+            label="◀ السابق"
+        ),
+        cl.Action(
+            name="change_ad", 
+            value=str((current_index + 1) % total_ads), 
+            label="التالي ▶"
+        )
+    ]
+
+    return cl.Message(
+        content=content,
+        elements=[image_element],
+        actions=actions
+    )
+
 async def send_ad_card():
-    """عرض الإعلانات على شكل معرض متحرك/قابل للتمرير أفقيًا (Carousel)"""
-    cards_html = ""
-    for ad in ADS_DATA:
-        cards_html += f"""
-        <div style="
-            flex: 0 0 200px;
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            padding: 8px;
-            background: #ffffff;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-            text-align: center;
-            box-sizing: border-box;
-        ">
-            <a href="{ad['url']}" target="_blank" style="text-decoration: none; color: inherit;">
-                <img src="{ad['image_path']}" style="
-                    width: 100%;
-                    height: 100px;
-                    object-fit: cover;
-                    border-radius: 6px;
-                    margin-bottom: 6px;
-                " />
-                <div style="
-                    font-size: 13px;
-                    font-weight: bold;
-                    color: #0066cc;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                ">
-                    {ad['title']}
-                </div>
-                <div style="
-                    font-size: 11px;
-                    color: #666;
-                    margin-top: 3px;
-                ">
-                    🔗 اضغط للتفاصيل
-                </div>
-            </a>
-        </div>
-        """
+    """إرسال بطاقة الإعلان التفاعلية الأولى"""
+    msg = await build_ad_message(0)
+    await msg.send()
 
-    carousel_html = f"""
-    <div style="margin-top: 10px; font-family: sans-serif;">
-        <p style="font-weight: bold; font-size: 14px; margin-bottom: 8px; color: #333;">
-            📢 <b>عروض ورعاية المنصة:</b>
-        </p>
-        <div style="
-            display: flex;
-            gap: 10px;
-            overflow-x: auto;
-            padding: 5px 2px 10px 2px;
-            scroll-behavior: smooth;
-            -webkit-overflow-scrolling: touch;
-        ">
-            {cards_html}
-        </div>
-    </div>
-    """
+@cl.action_callback("change_ad")
+async def on_change_ad(action: cl.Action):
+    """مستمع الضغط على الأزرار: تحديث الإعلان الحالي في نفس الرسالة أو إرسال إعلان محدث"""
+    target_index = int(action.value)
+    
+    # حذف أزرار الرسالة القديمة لتجنب الضغط المكرر
+    await action.remove()
+    
+    # إرسال الإعلان المصرّف الجديد
+    msg = await build_ad_message(target_index)
+    await msg.send()
 
-    await cl.Message(content=carousel_html).send()
+# ======================================================================================
 
 @cl.on_message
 async def on_message(message: cl.Message):
@@ -171,7 +167,7 @@ async def on_message(message: cl.Message):
         count = cl.user_session.get("response_count") + 1
         cl.user_session.set("response_count", count)
         
-        # عرض معرض الإعلانات كل إجابتين
+        # عرض بطاقة الإعلانات التفاعلية كل إجابتين
         if count % 2 == 0:
             await send_ad_card()
         
