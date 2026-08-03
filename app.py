@@ -1,5 +1,6 @@
 import os
 import base64
+import tempfile
 import chainlit as cl
 from dotenv import load_dotenv
 
@@ -52,7 +53,7 @@ def get_base64_image(image_path):
         return "https://picsum.photos/500/200"
 
 def build_ads_html():
-    """توليد كود HTML الكامل للسلايدر"""
+    """توليد كود HTML الخاص بالسلايدر"""
     slides_html = ""
     for ad in ADS_DATA:
         img_src = get_base64_image(ad["image"])
@@ -75,7 +76,7 @@ def build_ads_html():
         <meta charset="UTF-8">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
         <style>
-            body {{ margin: 0; padding: 0; background: transparent; overflow: hidden; }}
+            body {{ margin: 0; padding: 0; background: transparent; overflow: hidden; font-family: sans-serif; }}
             .swiper {{ width: 100%; padding: 10px 5px 30px 5px; }}
             .swiper-slide {{ width: 260px; }}
             .ad-card-link {{ text-decoration: none; display: block; }}
@@ -120,10 +121,9 @@ def build_ads_html():
             <div class="swiper-pagination"></div>
         </div>
 
-        <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"></script>
         <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
         <script>
-            window.onload = function() {{
+            window.addEventListener('load', function() {{
                 new Swiper(".mySwiper", {{
                     slidesPerView: "auto",
                     spaceBetween: 15,
@@ -137,7 +137,7 @@ def build_ads_html():
                         clickable: true,
                     }},
                 }});
-            }};
+            }});
         </script>
     </body>
     </html>
@@ -171,19 +171,24 @@ def setup_rag_chain():
 
 
 async def send_ads_carousel(header_text: str):
-    """إرسال الإعلانات باستخدام عنصر cl.Html لتجنب مشكلة الـ Raw Code"""
+    """حفظ الـ HTML في ملف مؤقت وإرساله لعرضه بسلاسة وبشكل فوري"""
     html_content = build_ads_html()
     
-    # تحويل الصفحة إلى iframe متوافق ليعمل داخل Chainlit بدون مشاكل Escaping
-    encoded_html = base64.b64encode(html_content.encode('utf-8')).decode('utf-8')
-    iframe_html = f'<iframe src="data:text/html;base64,{encoded_html}" style="width:100%; height:230px; border:none; border-radius:12px;"></iframe>'
+    # إنشاء ملف HTML مؤقت ليقرأه Chainlit كعنصر محلي بدون تأخير التشفير
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".html", mode="w", encoding="utf-8") as temp_file:
+        temp_file.write(html_content)
+        temp_file_path = temp_file.name
 
-    # استخدام cl.Html لتصيير العنصر بدلاً من Markdown
-    html_element = cl.Html(content=iframe_html)
+    # إرسال الملف باستخدام عنصر cl.File مع تفعيل display="inline"
+    file_element = cl.File(
+        name="ads.html",
+        path=temp_file_path,
+        display="inline"
+    )
 
     await cl.Message(
         content=header_text,
-        elements=[html_element],
+        elements=[file_element],
         author="الإعلانات"
     ).send()
 
