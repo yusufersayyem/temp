@@ -1,0 +1,16 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# نسخ ملف المتطلبات وتثبيتها
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# نسخ كافة ملفات المشروع
+COPY . .
+
+# فتح المنفذ الخاص بـ Render
+EXPOSE 8000
+
+# أمر تشغيل تطبيق Chainlit
+CMD ["chainlit", "run", "app.py", "--host", "0.0.0.0", "--port", "8000"]
