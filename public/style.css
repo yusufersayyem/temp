@@ -1,5 +1,0 @@
-/* إخفاء شعار Chainlit والاسم الذي بالمنتصف تماماً */
-#watermark, 
-.watermark {
-    display: none !important;
-}
