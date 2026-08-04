@@ -24,17 +24,18 @@ COLLECTION_NAME = "my_pdf_documents"  # اسم مجموعة البيانات ع�
 ADS_DATABASE = [
     {
         "id": 1,
-        "title": "🍕 مطعم خطار - الموصل",
+        "title": "🍕 مطعم الأصيل - الموصل",
         "description": "خصم خاص 15% لطلاب جامعة الموصل وكوادر التربية عند إبراز الهوية!",
-        "image_url": "https://ik.imagekit.io/63rncvror/ad1.webp?updatedAt=1785601369756", # استبدلها برابط صورة الإعلان Real URL
-        "link": "https://www.facebook.com/khutarrest/?locale=ku_TR"
+        "image_url": "https://picsum.photos/400/200?random=1", # استبدلها برابط صورة الإعلان Real URL
+        "link": "https://instagram.com",
+        "cta": "اطلب الآن عبر انستغرام"
     },
     {
         "id": 2,
-        "title": "جامعة النور الأهلية",
-        "description": "استقبال جميع الطلاب بمعدلات متوسطة",
-        "image_url": "https://ik.imagekit.io/63rncvror/ad10.webp?updatedAt=1785601362911",
-        "link": "https://wa.me/9647719744254",
+        "title": "💻 شركة التقنية للحلول البرمجية",
+        "description": "تصميم وتطوير المواقع والتطبيقات بأعلى جودة وبأسعار منافسة.",
+        "image_url": "https://picsum.photos/400/200?random=2",
+        "link": "https://wa.me/964000000000",
         "cta": "تواصل معنا عبر واتساب"
     }
 ]
