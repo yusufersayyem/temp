@@ -20,8 +20,14 @@ QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 COLLECTION_NAME = "my_pdf_documents"  # اسم مجموعة البيانات على Qdrant Cloud
 
 # ==================== 📢 قاعدة بيانات الشريط الإعلاني الرفيع ====================
-# هيكلية مبسطة ومناسبة للعرض في شريط رفيع
 ADS_DATABASE = [
+    # 📱 إعلان شركة زين العراق
+    {
+        "brand": "📲 زين العراق - Zain Iraq",
+        "offer": "استمتع بأقوى باقات إنترنت الطلاب مجاناً مع زين كاش!",
+        "link": "https://www.iq.zain.com",
+        "badge": "الراعي الرسمي"
+    },
     {
         "brand": "🍕 مطعم الأصيل",
         "offer": "خصم 15% للطلاب والكوادر التعليمية",
@@ -95,9 +101,9 @@ def load_rag_chain():
 
 @cl.on_chat_start
 async def on_chat_start():
-    # 🟢 1. إرسال رسالة الترحيب مع شريط إعلاني رفيع ومبسط في الأسفل
-    welcome_ad = ADS_DATABASE[0]
-    slim_banner = get_slim_banner_markdown(welcome_ad)
+    # 🟢 عرض إعلان زين العراق كراعي رسمي في بداية المحادثة
+    zain_ad = ADS_DATABASE[0]
+    slim_banner = get_slim_banner_markdown(zain_ad)
     
     welcome_message = (
         "أهلاً بك! 👋\n"
@@ -107,7 +113,7 @@ async def on_chat_start():
     
     await cl.Message(content=welcome_message).send()
     
-    # 🟢 2. تحميل الـ RAG Chain وتخزينها في جلسة المستخدم
+    # 🟢 تحميل الـ RAG Chain وتخزينها في جلسة المستخدم
     rag_chain = load_rag_chain()
     cl.user_session.set("rag_chain", rag_chain)
 
@@ -124,7 +130,7 @@ async def on_message(message: cl.Message):
             if "answer" in chunk:
                 await msg.stream_token(chunk["answer"])
         
-        # 🟢 3. اختيار إعلان عشوائي وإلحاقه كـ "شريط رفيع" في ذيل الرسالة (Footer Banner)
+        # 🟢 اختيار إعلان عشوائي (بما في ذلك إعلان زين) وإلحاقه في ذيل الرسالة
         random_ad = random.choice(ADS_DATABASE)
         banner_text = get_slim_banner_markdown(random_ad)
         
