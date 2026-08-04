@@ -19,14 +19,27 @@ QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 COLLECTION_NAME = "my_pdf_documents"  # اسم مجموعة البيانات على Qdrant Cloud
 
-# ==================== 📢 قاعدة بيانات الشريط الإعلاني الرفيع ====================
-ADS_DATABASE = [
-    # 📱 إعلان شركة زين العراق
+# ==================== 📢 قاعدة بيانات الإعلانات ====================
+# تم فصل الإعلانات المصورة عن الإعلانات النصية الرفيعة
+FEATURED_ADS = [
+    # 📱 إعلان زين كاش المصور (Featured Ad)
     {
-        "brand": "📲 زين العراق - Zain Iraq",
-        "offer": "استمتع بأقوى باقات إنترنت الطلاب مجاناً مع زين كاش!",
-        "link": "https://www.iq.zain.com",
+        "brand": "📲 زين كاش - Zain Cash",
+        "offer": "فعّل محفظتك الآن واحصل على باقة بيانات مجانية حصرياً لطلاب نينوى!",
+        "link": "https://www.zaincash.iq",
+        # ضع رابط الصورة الحقيقي هنا (بانر أفقي)
+        "image_url": "https://i.ibb.co/Xz95m4m/Zain-Cash-Banner.png", # رابط افتراضي كنموذج
         "badge": "الراعي الرسمي"
+    }
+]
+
+SLIM_ADS_DATABASE = [
+    # إعلانات نصية رفيعة للأجوبة المتكررة
+    {
+        "brand": "📲 زين كاش",
+        "offer": "حوّل أموالك واستلمها بسرعة وسهولة عبر Zain Cash.",
+        "link": "https://www.zaincash.iq",
+        "badge": "الشريك الاستراتيجي"
     },
     {
         "brand": "🍕 مطعم الأصيل",
@@ -48,11 +61,19 @@ ADS_DATABASE = [
     }
 ]
 
+# دالة تنسيق الشريط الرفيع (الافتراضي)
 def get_slim_banner_markdown(ad: dict) -> str:
-    """
-    دالة تقوم بتنسيق الإعلان على شكل شريط رفيع وأنيق (Slim Footer Banner)
-    """
     return f"\n\n---\n` 📢 {ad['badge']} ` **[{ad['brand']}]({ad['link']})** — {ad['offer']} 🔗 *[تفاصيل أكثر]({ad['link']})*"
+
+# دالة تنسيق كارت الصورة (للبداية فقط)
+def get_image_ad_markdown(ad: dict) -> str:
+    """
+    تقوم بتنسيق الإعلان على شكل كارت صورة تحت إعلان نصي (الداكن الرفيع)
+    """
+    text_banner = f"` 📢 {ad['badge']} ` **[{ad['brand']}]({ad['link']})** — {ad['offer']}"
+    image_display = f"\n\n[![ZainCash Ad]({ad['image_url']})]({ad['link']})" # الصورة قابلة للنقر أيضاً
+    return f"\n\n---\n{text_banner}\n{image_display}\n---"
+
 
 # ==================== 🧠 إعداد RAG Chain ====================
 
@@ -101,14 +122,17 @@ def load_rag_chain():
 
 @cl.on_chat_start
 async def on_chat_start():
-    # 🟢 عرض إعلان زين العراق كراعي رسمي في بداية المحادثة
-    zain_ad = ADS_DATABASE[0]
-    slim_banner = get_slim_banner_markdown(zain_ad)
+    # 🟢 1. عند البدء: عرض إعلان زين كاش المصور (كارت بانر) كترحيب خاص
+    featured_zain_ad = FEATURED_ADS[0]
+    
+    # تنسيق الكارت المصور
+    welcome_ad_card = get_image_ad_markdown(featured_zain_ad)
     
     welcome_message = (
         "أهلاً بك! 👋\n"
-        "المساعد الآلي للمديرية العامة لتربية نينوى وجامعة الموصل .. قم بطرح أي سؤال أو استفسار لديك."
-        f"{slim_banner}"
+        "المساعد الآلي للمديرية العامة لتربية نينوى وجامعة الموصل.. قم بطرح أي سؤال أو استفسار لديك."
+        "\n\n---"
+        f"\n**برعاية:**\n{welcome_ad_card}"
     )
     
     await cl.Message(content=welcome_message).send()
@@ -130,9 +154,9 @@ async def on_message(message: cl.Message):
             if "answer" in chunk:
                 await msg.stream_token(chunk["answer"])
         
-        # 🟢 اختيار إعلان عشوائي (بما في ذلك إعلان زين) وإلحاقه في ذيل الرسالة
-        random_ad = random.choice(ADS_DATABASE)
-        banner_text = get_slim_banner_markdown(random_ad)
+        # 🟢 2. في الأجوبة العادية: اختيار إعلان نصي رفيع عشوائي (غير مصور)
+        random_slim_ad = random.choice(SLIM_ADS_DATABASE)
+        banner_text = get_slim_banner_markdown(random_slim_ad)
         
         await msg.stream_token(banner_text)
         await msg.update()
