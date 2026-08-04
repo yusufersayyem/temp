@@ -26,7 +26,7 @@ ADS_DATABASE = [
         "id": 1,
         "title": "🍕 مطعم الأصيل - الموصل",
         "description": "خصم خاص 15% لطلاب جامعة الموصل وكوادر التربية عند إبراز الهوية!",
-        "image_url": "https://ik.imagekit.io/63rncvror/ad1.webp?updatedAt=1785601369756random=1", # استبدلها برابط صورة الإعلان Real URL
+        "image_url": "https://ik.imagekit.io/63rncvror/ad5.webp?updatedAt=1785601364212random=1", # استبدلها برابط صورة الإعلان Real URL
         "link": "https://instagram.com",
         "cta": "اطلب الآن عبر انستغرام"
     },
