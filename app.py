@@ -18,24 +18,6 @@ QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 COLLECTION_NAME = "my_pdf_documents"  # اسم مجموعة البيانات على Qdrant Cloud
 
-# ==================== 🏆 كارت الراعي الرسمي الثابت ====================
-
-def create_sponsor_sidebar_card() -> cl.Text:
-    """إنشاء كارت ثابت للراعي الرسمي يظهر في الشريط الجانبي (Sidebar)"""
-    return cl.Text(
-        name="⭐ الراعي الرسمي للتطبيق",
-        content=(
-            "### 📚 مكتبة ومطبعة الجامعة المركزية\n"
-            "الراعي المعتمد لخدمات طلاب جامعة الموصل ومديرية تربية نينوى.\n\n"
-            "✨ **الخدمات المتاحة:**\n"
-            "* توفير كافة الملازم والكتب المنهجية الرسمية.\n"
-            "* طباعة وتجليد بحوث التخرج والرسائل الأكاديمية.\n"
-            "* خدمة التوصيل السريع لكافة مناطق الموصل.\n\n"
-            "📞 [اضغط هنا للتواصل المباشر عبر واتساب](https://wa.me/9640000000000)"
-        ),
-        display="side"  # 🟢 تثبيت الإعلان في الشريط الجانبي
-    )
-
 # ==================== 🧠 إعداد RAG Chain ====================
 
 def load_rag_chain():
@@ -83,12 +65,9 @@ def load_rag_chain():
 
 @cl.on_chat_start
 async def on_chat_start():
-    # 🟢 1. إرسال الإعلان الثابت إلى الشريط الجانبي مع رسالة الترحيب
-    sponsor_card = create_sponsor_sidebar_card()
-    
+    # 🟢 1. إرسال رسالة الترحيب فقط دون إضافة عناصر أو إعلانات
     await cl.Message(
-        content="تحية طيبة ... المساعد الآلي للمديرية العامة للتربية في محافظة نينوى وجامعة الموصل. تفضل بطرح أي سؤال لديك.",
-        elements=[sponsor_card]
+        content="تحية طيبة ... المساعد الآلي للمديرية العامة للتربية في محافظة نينوى وجامعة الموصل. تفضل بطرح أي سؤال لديك."
     ).send()
     
     # 🟢 2. تحميل الـ RAG Chain وتخزينها في جلسة المستخدم
@@ -103,7 +82,7 @@ async def on_message(message: cl.Message):
     await msg.send()
     
     try:
-        # 🟢 بث الإجابة تدريجياً وبدون أي إعلانات داخلية إضافية (محادثة نظيفة)
+        # 🟢 بث الإجابة تدريجياً
         async for chunk in rag_chain.astream({"input": message.content}):
             if "answer" in chunk:
                 await msg.stream_token(chunk["answer"])
