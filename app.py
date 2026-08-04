@@ -34,7 +34,7 @@ ADS_DATABASE = [
         "id": 2,
         "title": "💻 شركة التقنية للحلول البرمجية",
         "description": "تصميم وتطوير المواقع والتطبيقات بأعلى جودة وبأسعار منافسة.",
-        "image_url": "https://picsum.photos/400/200?random=2",
+        "image_url": "https://ik.imagekit.io/63rncvror/ad10.webp?updatedAt=1785601362911random=2",
         "link": "https://wa.me/964000000000",
         "cta": "تواصل معنا عبر واتساب"
     }
