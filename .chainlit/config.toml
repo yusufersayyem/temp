@@ -95,7 +95,7 @@ reaction_on_message_received = false
 
 [UI]
 # إخفاء شاشة/صفحة الترحيب
-show_readme_as_default = false
+show_readme_as_default = true
 
 # اسم التطبيق
 name = "مساعد تربية نينوى وجامعة الموصل"
