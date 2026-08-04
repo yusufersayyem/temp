@@ -156,7 +156,8 @@ alert_style = "classic"
 logo_file_url = "https://cdn-icons-png.flaticon.com/512/2040/2040946.png"
 
 # Load assistant avatar image directly from URL.
-default_avatar_file_url = ""
+# Load assistant avatar image directly from URL.
+default_avatar_file_url = "https://cdn-icons-png.flaticon.com/512/4712/4712035.png"
 
 # Avatar size in pixels (default: 20).
 # avatar_size = 20
