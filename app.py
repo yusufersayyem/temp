@@ -19,37 +19,34 @@ QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 COLLECTION_NAME = "my_pdf_documents"  # اسم مجموعة البيانات على Qdrant Cloud
 
-# ==================== 📢 قاعدة بيانات الإعلانات (Ads Database) ====================
-# يمكنك مستقبلاً جلب هذه البيانات من قاعدة بيانات أو ملف JSON
+# ==================== 📢 قاعدة بيانات الشريط الإعلاني الرفيع ====================
+# هيكلية مبسطة ومناسبة للعرض في شريط رفيع
 ADS_DATABASE = [
     {
-        "id": 1,
-        "title": "🍕 مطعم الأصيل - الموصل",
-        "description": "خصم خاص 15% لطلاب جامعة الموصل وكوادر التربية عند إبراز الهوية!",
-        "image_url": "https://ik.imagekit.io/63rncvror/ad5.webp?updatedAt=1785601364212random=1", # استبدلها برابط صورة الإعلان Real URL
-        "link": "https://instagram.com",
-        "cta": "اطلب الآن عبر انستغرام"
+        "brand": "🍕 مطعم الأصيل",
+        "offer": "خصم 15% للطلاب والكوادر التعليمية",
+        "link": "https://instagram.com/example_restaurant",
+        "badge": "إعلان رعاية"
     },
     {
-        "id": 2,
-        "title": "💻 شركة التقنية للحلول البرمجية",
-        "description": "تصميم وتطوير المواقع والتطبيقات بأعلى جودة وبأسعار منافسة.",
-        "image_url": "https://ik.imagekit.io/63rncvror/ad10.webp?updatedAt=1785601362911random=2",
+        "brand": "💻 شركة التقنية",
+        "offer": "تصميم مواقع وتطبيقات للشركات والجامعات",
         "link": "https://wa.me/964000000000",
-        "cta": "تواصل معنا عبر واتساب"
+        "badge": "راعي المساعد"
+    },
+    {
+        "brand": "☕ كافيه النخبة",
+        "offer": "جلسات هادئة للدراسة بالقرب من المجمّع الثاني",
+        "link": "https://maps.google.com",
+        "badge": "توصية"
     }
 ]
 
-def format_ad_card(ad: dict) -> str:
-    """دالة مساعدة لإنشاء كارت إعلاني بتنسيق Markdown ملفت"""
-    return (
-        f"\n---\n"
-        f"### {ad['title']}\n"
-        f"![Ad Banner]({ad['image_url']})\n"
-        f"{ad['description']}\n\n"
-        f"👉 **[{ad['cta']}]({ad['link']})**\n"
-        f"---"
-    )
+def get_slim_banner_markdown(ad: dict) -> str:
+    """
+    دالة تقوم بتنسيق الإعلان على شكل شريط رفيع وأنيق (Slim Footer Banner)
+    """
+    return f"\n\n---\n` 📢 {ad['badge']} ` **[{ad['brand']}]({ad['link']})** — {ad['offer']} 🔗 *[تفاصيل أكثر]({ad['link']})*"
 
 # ==================== 🧠 إعداد RAG Chain ====================
 
@@ -98,14 +95,14 @@ def load_rag_chain():
 
 @cl.on_chat_start
 async def on_chat_start():
-    # 🟢 1. اختيار إعلان مميز (مثلاً الإعلان الأول) لعرضه ككارت عند البداية
-    featured_ad = ADS_DATABASE[0]
-    welcome_ad_card = format_ad_card(featured_ad)
+    # 🟢 1. إرسال رسالة الترحيب مع شريط إعلاني رفيع ومبسط في الأسفل
+    welcome_ad = ADS_DATABASE[0]
+    slim_banner = get_slim_banner_markdown(welcome_ad)
     
     welcome_message = (
         "أهلاً بك! 👋\n"
-        "المساعد الآلي للمديرية العامة لتربية نينوى وجامعة الموصل .. قم بطرح أي سؤال او استفسار لديك.\n"
-        f"\n**رعاة الخدمة:**\n{welcome_ad_card}"
+        "المساعد الآلي للمديرية العامة لتربية نينوى وجامعة الموصل .. قم بطرح أي سؤال أو استفسار لديك."
+        f"{slim_banner}"
     )
     
     await cl.Message(content=welcome_message).send()
@@ -127,11 +124,11 @@ async def on_message(message: cl.Message):
             if "answer" in chunk:
                 await msg.stream_token(chunk["answer"])
         
-        # 🟢 3. إرفاق إعلان عشوائي كبطاقة صغيرة في نهاية كل إجابة
+        # 🟢 3. اختيار إعلان عشوائي وإلحاقه كـ "شريط رفيع" في ذيل الرسالة (Footer Banner)
         random_ad = random.choice(ADS_DATABASE)
-        ad_footer = f"\n\n> 📢 **إعلان رعائي:** [{random_ad['title']}]({random_ad['link']}) - {random_ad['description']}"
+        banner_text = get_slim_banner_markdown(random_ad)
         
-        await msg.stream_token(ad_footer)
+        await msg.stream_token(banner_text)
         await msg.update()
         
     except Exception as e:
