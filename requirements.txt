@@ -1,2 +1,2 @@
 chainlit
-groq
+huggingface_hub
