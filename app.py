@@ -1,58 +1,46 @@
 import os
 import chainlit as cl
-from groq import Groq
+from huggingface_hub import InferenceClient
 
-# جلب المفتاح من متغيرات البيئة
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
-client = Groq(api_key=GROQ_API_KEY)
+HF_TOKEN = os.environ.get("HF_TOKEN")
+client = InferenceClient(
+    model="meta-llama/Llama-3.3-70B-Instruct",
+    token=HF_TOKEN
+)
 
 @cl.on_chat_start
 async def start():
-    # التحقق من وجود مفتاح الـ API
-    if not GROQ_API_KEY:
-        await cl.Message(
-            content="⚠️ **خطأ:** لم يتم العثور على `GROQ_API_KEY`.\nيرجى إضافته في إعدادات البيئة (Environment Variables) على Render."
-        ).send()
+    if not HF_TOKEN:
+        await cl.Message(content="⚠️ يرجى إضافة HF_TOKEN في متغيرات البيئة!").send()
         return
 
-    # ضبط إعدادات المحادثة والرسالة الترحيبية
     cl.user_session.set("message_history", [
-        {"role": "system", "content": "أنت مساعد ذكي ومفيد تتحدث باللغة العربية دائماً وبأسلوب لطيف وواضح."}
+        {"role": "system", "content": "أنت مساعد ذكي ومفيد تتحدث باللغة العربية دائماً."}
     ])
-    
-    await cl.Message(content="مرحباً بك! أنا شات بوت يعمل بنموذج Llama 3، كيف يمكنني مساعدتك اليوم؟").send()
+    await cl.Message(content="مرحباً بك! كيف يمكنني مساعدتك اليوم؟").send()
 
 @cl.on_message
 async def main(message: cl.Message):
-    history = cl.user_session.get("message_history")
-    
-    if not history:
-        history = [{"role": "system", "content": "أنت مساعد ذكي ومفيد تتحدث باللغة العربية دائماً."}]
-
-    # إضافة رسالة المستخدم للسجل
+    history = cl.user_session.get("message_history", [])
     history.append({"role": "user", "content": message.content})
 
-    # إنشاء رسالة فارغة لعرض الرد بشكل مباشر (Streaming)
     msg = cl.Message(content="")
     await msg.send()
 
     try:
-        # استدعاء نموذج Llama 3 الشغال والمجاني على Groq
-        completion = client.chat.completions.create(
-            model="llama3-8b-8192",  # يمكنك استخدام "llama3-70b-8192" لردود أذكى
+        response = client.chat_completion(
             messages=history,
-            temperature=0.7,
+            max_tokens=1000,
             stream=True
         )
 
         full_response = ""
-        for chunk in completion:
-            if chunk.choices[0].delta.content:
+        for chunk in response:
+            if chunk.choices and chunk.choices[0].delta.content:
                 token = chunk.choices[0].delta.content
                 await msg.stream_token(token)
                 full_response += token
 
-        # تحديث الرسالة بالكامل وحفظها في السجل
         await msg.update()
         history.append({"role": "assistant", "content": full_response})
         cl.user_session.set("message_history", history)
