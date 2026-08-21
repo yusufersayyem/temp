@@ -3,7 +3,7 @@ import asyncio
 from dotenv import load_dotenv
 import chainlit as cl
 
-from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
+from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from langchain_groq import ChatGroq
 
@@ -20,14 +20,15 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 HUGGINGFACEHUB_API_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 COLLECTION_NAME = "my_pdf_documents"
 
-# 1. استدعام BAAI/bge-m3 عبر الـ API سحابياً (بدون تنزيل أي شيء وبسرعة إقلاع خيالية)
-print("جاري الاتصال بـ Hugging Face API للـ Embeddings...")
-embeddings = HuggingFaceInferenceAPIEmbeddings(
-    api_key=HUGGINGFACEHUB_API_TOKEN,
-    model_name="BAAI/bge-m3"
+# 1. استدعاء BAAI/bge-m3 عبر المكتبة الحديثة لتفادي خطأ النطاق القديم
+print("جاري الاتصال بـ Hugging Face Inference API...")
+embeddings = HuggingFaceEndpointEmbeddings(
+    model="BAAI/bge-m3",
+    huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN,
+    timeout=30
 )
 
-# 2. ربط Qdrant
+# 2. ربط Qdrant Vector Store
 vector_store = QdrantVectorStore.from_existing_collection(
     embedding=embeddings,
     collection_name=COLLECTION_NAME,
@@ -46,7 +47,7 @@ llm = ChatGroq(
 def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
-# 4. بناء الـ Prompt والـ Chain
+# 4. بناء Prompt و Chain
 template = """أنت مساعد ذكي ومؤدب متخصص في الإجابة على استفسارات تربية نينوى.
 استخدم المعلومات الواردة في السياق المرفق فقط للإجابة على سؤال المستخدم.
 إذا لم تجد الإجابة في السياق، قل بوضوح: 'عذراً، لا تتوفر هذه المعلومة ضمن بيانات تربية نينوى المتاحة حالياً.' ولا تقم بابتكار إجابات من عندك.
