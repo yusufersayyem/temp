@@ -42,7 +42,7 @@ async def on_chat_start():
     # 3. Groq LLM (استجابة برمجية فائقة السرعة)
     llm = ChatGroq(
         groq_api_key=GROQ_API_KEY,
-        model_name="llama-3.3-70b-versatile",
+        model_name="llama-3.3-70b-versatile", 
         temperature=0.2
     )
 
