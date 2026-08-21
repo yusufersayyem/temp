@@ -1,92 +1,40 @@
 import os
-import asyncio
-from dotenv import load_dotenv
+from groq import AsyncGroq
 import chainlit as cl
 
-from langchain_huggingface import HuggingFaceEndpointEmbeddings
-from langchain_qdrant import QdrantVectorStore
-from langchain_groq import ChatGroq
-
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough
-from langchain_core.output_parsers import StrOutputParser
-from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
-
-embeddings = HuggingFaceInferenceAPIEmbeddings(
-    api_key=HUGGINGFACEHUB_API_TOKEN,
-    model_name="BAAI/bge-m3"
-)
-load_dotenv()
-
-# Variables
-QDRANT_URL = os.getenv("QDRANT_URL")
-QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-HUGGINGFACEHUB_API_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
-COLLECTION_NAME = "my_pdf_documents"
-
-# 1. إعداد الـ Embeddings بالطريقة الصحيحة لتفادي ValidationError
-print("جاري الاتصال بـ Hugging Face Inference API...")
-embeddings = HuggingFaceEndpointEmbeddings(
-    model="BAAI/bge-m3",
-    huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN
-)
-
-# 2. ربط Qdrant Vector Store
-vector_store = QdrantVectorStore.from_existing_collection(
-    embedding=embeddings,
-    collection_name=COLLECTION_NAME,
-    url=QDRANT_URL,
-    api_key=QDRANT_API_KEY
-)
-retriever = vector_store.as_retriever(search_kwargs={"k": 3})
-
-# 3. إعداد نموذج Groq السريع
-llm = ChatGroq(
-    groq_api_key=GROQ_API_KEY,
-    model_name="llama-3.3-70b-versatile",
-    temperature=0.2
-)
-
-def format_docs(docs):
-    return "\n\n".join(doc.page_content for doc in docs)
-
-# 4. بناء Prompt و Chain
-template = """أنت مساعد ذكي ومؤدب متخصص في الإجابة على استفسارات تربية نينوى.
-استخدم المعلومات الواردة في السياق المرفق فقط للإجابة على سؤال المستخدم.
-إذا لم تجد الإجابة في السياق، قل بوضوح: 'عذراً، لا تتوفر هذه المعلومة ضمن بيانات تربية نينوى المتاحة حالياً.' ولا تقم بابتكار إجابات من عندك.
-
-السياق المتاح:
-{context}
-
-السؤال: {question}
-الإجابة:"""
-
-prompt = ChatPromptTemplate.from_template(template)
-
-rag_chain = (
-    {"context": retriever | format_docs, "question": RunnablePassthrough()}
-    | prompt
-    | llm
-    | StrOutputParser()
-)
+# تهيئة العميل باستعمال Async للسرعة والأداء
+client = AsyncGroq(api_key=os.environ.get("GROQ_API_KEY"))
 
 @cl.on_chat_start
-async def on_chat_start():
-    await cl.Message(content="أهلاً بك! أنا مساعدك الذكي الخاص بتربية نينوى. كيف يمكنني مساعدتك اليوم؟").send()
+async def start_chat():
+    # إعداد السجل الأولي للمحادثة عند فتح المستخدم للصفحة
+    cl.user_session.set(
+        "message_history",
+        [{"role": "system", "content": "أنت مساعد ذكي ولطيف تتحدث باللغة العربية."}]
+    )
 
 @cl.on_message
-async def on_message(message: cl.Message):
+async def main(message: cl.Message):
+    # جلب سجل المحادثة السابق
+    message_history = cl.user_session.get("message_history")
+    message_history.append({"role": "user", "content": message.content})
+
+    # إعداد رسالة فارغة في الشاشة لاستقبال الرد المباشر (Streaming)
     msg = cl.Message(content="")
     await msg.send()
 
-    def run_chain():
-        return rag_chain.invoke(message.content)
+    # استدعاء نموذج Qwen عبر Groq بنفس أسلوب البث
+    stream = await client.chat.completions.create(
+        model="qwen-2.5-32b",
+        messages=message_history,
+        stream=True,
+    )
 
-    try:
-        response_text = await asyncio.to_thread(run_chain)
-        msg.content = response_text
-        await msg.update()
-    except Exception as e:
-        msg.content = f"حدث خطأ أثناء معالجة الطلب: {str(e)}"
-        await msg.update()
+    async for chunk in stream:
+        if chunk.choices[0].delta.content:
+            await msg.stream_token(chunk.choices[0].delta.content)
+
+    # تحديث النتيجة النهائية وحفظها في السجل
+    await msg.update()
+    message_history.append({"role": "assistant", "content": msg.content})
+    cl.user_session.set("message_history", message_history)
