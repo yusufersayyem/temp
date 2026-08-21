@@ -20,12 +20,11 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 HUGGINGFACEHUB_API_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 COLLECTION_NAME = "my_pdf_documents"
 
-# 1. استدعاء BAAI/bge-m3 عبر المكتبة الحديثة لتفادي خطأ النطاق القديم
+# 1. إعداد الـ Embeddings بالطريقة الصحيحة لتفادي ValidationError
 print("جاري الاتصال بـ Hugging Face Inference API...")
 embeddings = HuggingFaceEndpointEmbeddings(
     model="BAAI/bge-m3",
-    huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN,
-    timeout=30
+    huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN
 )
 
 # 2. ربط Qdrant Vector Store
