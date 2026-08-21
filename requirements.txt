@@ -4,6 +4,5 @@ langchain-community
 langchain-core
 langchain-qdrant
 langchain-groq
-fastembed
 qdrant-client
 python-dotenv
