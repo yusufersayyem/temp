@@ -3,6 +3,7 @@ import asyncio
 from dotenv import load_dotenv
 import chainlit as cl
 
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from langchain_groq import ChatGroq
 
@@ -18,17 +19,24 @@ QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 COLLECTION_NAME = "my_pdf_documents"
 
-# 1. الاتصال بـ Qdrant واستخدام التضمين التلقائي بدون تحميل أي نموذج محلياً
-print("جاري الاتصال بـ Qdrant Vector Store...")
+# 1. إعداد BAAI/bge-m3 مع تقليل الاستهلاك لأقصى درجة (استخراج متجهات الأسئلة فقط)
+print("جاري تحميل نموذج التضمين...")
+embeddings = HuggingFaceEmbeddings(
+    model_name="BAAI/bge-m3",
+    model_kwargs={'device': 'cpu'},
+    encode_kwargs={'normalize_embeddings': True, 'batch_size': 1}
+)
+
+# 2. ربط قاعدة البيانات Qdrant
 vector_store = QdrantVectorStore.from_existing_collection(
+    embedding=embeddings,
     collection_name=COLLECTION_NAME,
     url=QDRANT_URL,
-    api_key=QDRANT_API_KEY,
-    embedding=None # يمنع استدعاء موديل محلي ويتصل بالمكافئ السحابي المخزن
+    api_key=QDRANT_API_KEY
 )
 retriever = vector_store.as_retriever(search_kwargs={"k": 3})
 
-# 2. إعداد نموذج Groq السريع جداً
+# 3. إعداد النموذج اللغوي السريع جداً من Groq
 llm = ChatGroq(
     groq_api_key=GROQ_API_KEY,
     model_name="llama-3.3-70b-versatile",
@@ -38,7 +46,7 @@ llm = ChatGroq(
 def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
-# 3. بناء Prompt و Chain
+# 4. بناء الـ Prompt والـ Chain
 template = """أنت مساعد ذكي ومؤدب متخصص في الإجابة على استفسارات تربية نينوى.
 استخدم المعلومات الواردة في السياق المرفق فقط للإجابة على سؤال المستخدم.
 إذا لم تجد الإجابة في السياق، قل بوضوح: 'عذراً، لا تتوفر هذه المعلومة ضمن بيانات تربية نينوى المتاحة حالياً.' ولا تقم بابتكار إجابات من عندك.
