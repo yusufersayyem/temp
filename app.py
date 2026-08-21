@@ -4,6 +4,8 @@ import chainlit as cl
 
 from langchain_huggingface import HuggingFaceEmbeddings, HuggingFaceEndpoint
 from langchain_qdrant import QdrantVectorStore
+
+# التعديل الهام: الاستيراد المباشر لتوافق الإصدارات الحديثة
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
@@ -18,11 +20,10 @@ COLLECTION_NAME = "my_pdf_documents"
 
 @cl.on_chat_start
 async def on_chat_start():
-    cl.user_session.set("history", [])
     msg = cl.Message(content="جاري الاتصال بالنموذج وقاعدة البيانات...")
     await msg.send()
 
-    # 1. Embedding Model
+    # 1. Embedding Model (BAAI/bge-m3)
     embeddings = HuggingFaceEmbeddings(
         model_name="BAAI/bge-m3",
         model_kwargs={'device': 'cpu'},
@@ -38,7 +39,7 @@ async def on_chat_start():
     )
     retriever = vector_store.as_retriever(search_kwargs={"k": 3})
 
-    # 3. LLM (Qwen 2.5 7B via Hugging Face API)
+    # 3. LLM (Qwen 2.5 7B via Hugging Face Inference API)
     llm = HuggingFaceEndpoint(
         repo_id="Qwen/Qwen2.5-7B-Instruct",
         huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN,
@@ -63,6 +64,7 @@ async def on_chat_start():
     question_answer_chain = create_stuff_documents_chain(llm, prompt)
     rag_chain = create_retrieval_chain(retriever, question_answer_chain)
 
+    # حفظ السلسلة في جلسة المستخدم
     cl.user_session.set("rag_chain", rag_chain)
     
     msg.content = "أهلاً بك! أنا مساعدك الذكي الخاص بتربية نينوى. كيف يمكنني مساعدتك اليوم؟"
@@ -72,11 +74,7 @@ async def on_chat_start():
 async def on_message(message: cl.Message):
     rag_chain = cl.user_session.get("rag_chain")
     
-    cb = cl.LangChainCallbackHandler()
-    
-    res = await rag_chain.ainvoke(
-        {"input": message.content},
-        callbacks=[cb]
-    )
+    # إرسال طلب المعالجة واستلام الإجابة
+    res = await rag_chain.ainvoke({"input": message.content})
     
     await cl.Message(content=res["answer"]).send()
