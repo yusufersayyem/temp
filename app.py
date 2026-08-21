@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 import chainlit as cl
 
-from langchain_community.embeddings import FastEmbedEmbeddings
+from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from langchain_groq import ChatGroq
 
@@ -16,6 +16,7 @@ load_dotenv()
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+HUGGINGFACEHUB_API_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 COLLECTION_NAME = "my_pdf_documents"
 
 def format_docs(docs):
@@ -23,9 +24,10 @@ def format_docs(docs):
 
 @cl.on_chat_start
 async def on_chat_start():
-    # 1. استخدام FastEmbed لنموذج bge-m3 (خفيف جداً على الذاكرة ومطابق لبياناتك)
-    embeddings = FastEmbedEmbeddings(
-        model_name="BAAI/bge-m3"
+    # 1. Hugging Face Inference API لنموذج BAAI/bge-m3 (سحابي بدون استهلاك RAM)
+    embeddings = HuggingFaceEndpointEmbeddings(
+        model="BAAI/bge-m3",
+        huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN
     )
 
     # 2. Qdrant Retriever
@@ -37,7 +39,7 @@ async def on_chat_start():
     )
     retriever = vector_store.as_retriever(search_kwargs={"k": 3})
 
-    # 3. LLM عبر Groq (سريع جداً ودقيق)
+    # 3. Groq LLM (استجابة برمجية فائقة السرعة)
     llm = ChatGroq(
         groq_api_key=GROQ_API_KEY,
         model_name="llama-3.3-70b-versatile",
@@ -75,7 +77,7 @@ async def on_message(message: cl.Message):
     msg = cl.Message(content="")
     await msg.send()
 
-    # بث الإجابة بشكل تدريجي مريح وسريع
+    # البث المباشر المريح للرد
     async for chunk in rag_chain.astream(message.content):
         await msg.stream_token(chunk)
         
