@@ -1,25 +1,40 @@
 import os
+from typing import List
 import chainlit as cl
-from huggingface_hub import AsyncInferenceClient
+from huggingface_hub import AsyncInferenceClient, InferenceClient
+from langchain_core.embeddings import Embeddings
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
 
-# 1. جلب المفاتيح والإعدادات
+# 1. إعداد المتغيرات والمفاتيح
 HF_TOKEN = os.environ.get("HF_TOKEN")
 MODEL_ID = "Qwen/Qwen2.5-72B-Instruct"
 EMBEDDING_MODEL_ID = "BAAI/bge-m3"
 FAISS_INDEX_PATH = "faiss_index"
 
-# عميل Hugging Face لنموذج التوليد Qwen
-client = AsyncInferenceClient(model=MODEL_ID, token=HF_TOKEN)
+# 2. إنشاء فئة تخصيص لتوليد الـ Embeddings مباشرة لتجنب أخطاء الـ API القديمة
+class DirectHFEmbeddings(Embeddings):
+    def __init__(self, model_name: str, token: str):
+        self.client = InferenceClient(model=model_name, token=token)
 
-# 2. استدعاء نموذج التضمين عبر الـ API (بدون استهلاك RAM على Render)
-embeddings = HuggingFaceInferenceAPIEmbeddings(
-    api_key=HF_TOKEN,
-    model_name=EMBEDDING_MODEL_ID
-)
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        response = self.client.feature_extraction(texts)
+        return response.tolist() if hasattr(response, "tolist") else response
 
-# 3. تحميل فهرس FAISS محلياً مع ربطه بـ API التضمين
+    def embed_query(self, text: str) -> List[float]:
+        response = self.client.feature_extraction(text)
+        # في حال إرجاع أبعاد متداخلة لسؤال واحد، يتم تسطيح القائمة
+        if isinstance(response, list) and len(response) > 0 and isinstance(response[0], list):
+            if isinstance(response[0][0], list):
+                response = response[0][0]
+            else:
+                response = response[0]
+        return response.tolist() if hasattr(response, "tolist") else response
+
+# 3. تهيئة عميل Qwen وعميل الـ Embeddings
+llm_client = AsyncInferenceClient(model=MODEL_ID, token=HF_TOKEN)
+embeddings = DirectHFEmbeddings(model_name=EMBEDDING_MODEL_ID, token=HF_TOKEN)
+
+# 4. تحميل قاعدة بيانات FAISS محلياً
 vector_store = FAISS.load_local(
     FAISS_INDEX_PATH, 
     embeddings, 
@@ -41,7 +56,7 @@ async def main(message: cl.Message):
     message_history = cl.user_session.get("message_history")
 
     try:
-        # البحث الدلالي: يرسل السؤال لـ Hugging Face API للـ Embeddings ثم يبحث في FAISS
+        # البحث الدلالي في FAISS عن طريق الـ API الخارجي
         docs = vector_store.similarity_search(message.content, k=2)
         
         context_text = ""
@@ -59,8 +74,8 @@ async def main(message: cl.Message):
         msg = cl.Message(content="")
         await msg.send()
 
-        # استدعاء نموذج Qwen للوليد النصي عبر API
-        stream = await client.chat_completion(
+        # إرسال المحادثة للنموذج عبر البث التدفقي (Streaming)
+        stream = await llm_client.chat_completion(
             messages=message_history,
             max_tokens=2048,
             temperature=0.3,
@@ -74,7 +89,7 @@ async def main(message: cl.Message):
 
         await msg.update()
         
-        # تنظيف سجل المحادثة لتوفير الـ Tokens
+        # تنظيف سياق المحادثة وتوفير الـ Tokens
         message_history[-1] = {"role": "user", "content": message.content}
         message_history.append({"role": "assistant", "content": msg.content})
         cl.user_session.set("message_history", message_history)
