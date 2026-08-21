@@ -1,5 +1,5 @@
 chainlit
-langchain>=0.2.0
+langchain
 langchain-community
 langchain-core
 langchain-huggingface
