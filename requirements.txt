@@ -1,2 +1,9 @@
 chainlit
+langchain
+langchain-community
+langchain-huggingface
+langchain-qdrant
+qdrant-client
+python-dotenv
 huggingface_hub
+sentence-transformers
