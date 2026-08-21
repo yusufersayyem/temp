@@ -4,6 +4,7 @@ langchain-community
 langchain-core
 langchain-huggingface
 langchain-qdrant
+langchain-groq
 qdrant-client
 python-dotenv
-huggingface_hub
+sentence-transformers
