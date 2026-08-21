@@ -3,6 +3,7 @@ import asyncio
 from dotenv import load_dotenv
 import chainlit as cl
 
+from langchain_community.embeddings import FastEmbedEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from langchain_groq import ChatGroq
 
@@ -18,17 +19,20 @@ QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 COLLECTION_NAME = "my_pdf_documents"
 
-# 1. إعداد Qdrant FastEmbed بدون استهلاك الذاكرة
-print("جاري الاتصال بـ Qdrant مع FastEmbed الخفيف...")
+# 1. إعداد FastEmbed لنموذج BAAI/bge-m3 بحجم ذاكرة ضئيل جدًا
+print("جاري تحميل نموذج FastEmbed لـ BAAI/bge-m3...")
+embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-m3")
+
+# 2. ربط قاعدة البيانات Qdrant بالوسيط الصحيح (embedding)
 vector_store = QdrantVectorStore.from_existing_collection(
-    embedding_name="BAAI/bge-m3", # FastEmbed ستتعامل مع الاسم بشكل متوافق وخفيف جداً
+    embedding=embeddings,
     collection_name=COLLECTION_NAME,
     url=QDRANT_URL,
     api_key=QDRANT_API_KEY
 )
 retriever = vector_store.as_retriever(search_kwargs={"k": 3})
 
-# 2. إعداد نموذج Groq الفائق السرعة
+# 3. إعداد النموذج اللغوي السريع من Groq
 llm = ChatGroq(
     groq_api_key=GROQ_API_KEY,
     model_name="llama-3.3-70b-versatile",
@@ -38,7 +42,7 @@ llm = ChatGroq(
 def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
-# 3. بناء RAG Chain
+# 4. بناء الـ Prompt والـ Chain
 template = """أنت مساعد ذكي ومؤدب متخصص في الإجابة على استفسارات تربية نينوى.
 استخدم المعلومات الواردة في السياق المرفق فقط للإجابة على سؤال المستخدم.
 إذا لم تجد الإجابة في السياق، قل بوضوح: 'عذراً، لا تتوفر هذه المعلومة ضمن بيانات تربية نينوى المتاحة حالياً.' ولا تقم بابتكار إجابات من عندك.
