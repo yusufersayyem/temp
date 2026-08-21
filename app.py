@@ -3,7 +3,6 @@ import asyncio
 from dotenv import load_dotenv
 import chainlit as cl
 
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from langchain_groq import ChatGroq
 
@@ -19,24 +18,17 @@ QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 COLLECTION_NAME = "my_pdf_documents"
 
-# 1. تحميل نموذج الـ Embeddings مرّة واحدة فقط عند إقلاع الخادم وليس عند كل محادثة
-print("جاري تحميل نموذج التضمين لمرة واحدة...")
-embeddings = HuggingFaceEmbeddings(
-    model_name="BAAI/bge-m3",
-    model_kwargs={'device': 'cpu'},
-    encode_kwargs={'normalize_embeddings': True}
-)
-
-# 2. ربط Qdrant لمرة واحدة على مستوى التطبيق
+# 1. إعداد Qdrant FastEmbed بدون استهلاك الذاكرة
+print("جاري الاتصال بـ Qdrant مع FastEmbed الخفيف...")
 vector_store = QdrantVectorStore.from_existing_collection(
-    embedding=embeddings,
+    embedding_name="BAAI/bge-m3", # FastEmbed ستتعامل مع الاسم بشكل متوافق وخفيف جداً
     collection_name=COLLECTION_NAME,
     url=QDRANT_URL,
     api_key=QDRANT_API_KEY
 )
 retriever = vector_store.as_retriever(search_kwargs={"k": 3})
 
-# 3. إعداد النموذج اللغوي السريع من Groq
+# 2. إعداد نموذج Groq الفائق السرعة
 llm = ChatGroq(
     groq_api_key=GROQ_API_KEY,
     model_name="llama-3.3-70b-versatile",
@@ -46,7 +38,7 @@ llm = ChatGroq(
 def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
-# 4. بناء الـ Prompt والـ Chain
+# 3. بناء RAG Chain
 template = """أنت مساعد ذكي ومؤدب متخصص في الإجابة على استفسارات تربية نينوى.
 استخدم المعلومات الواردة في السياق المرفق فقط للإجابة على سؤال المستخدم.
 إذا لم تجد الإجابة في السياق، قل بوضوح: 'عذراً، لا تتوفر هذه المعلومة ضمن بيانات تربية نينوى المتاحة حالياً.' ولا تقم بابتكار إجابات من عندك.
@@ -75,12 +67,10 @@ async def on_message(message: cl.Message):
     msg = cl.Message(content="")
     await msg.send()
 
-    # تشغيل عملية البحث والتوليد في خلفية منفصلة لمنع تجمد واجهة Chainlit
     def run_chain():
         return rag_chain.invoke(message.content)
 
     try:
-        # استخدام asyncio.to_thread لضمان سلاسة الواجهة وعدم انقطاع الاتصال
         response_text = await asyncio.to_thread(run_chain)
         msg.content = response_text
         await msg.update()
