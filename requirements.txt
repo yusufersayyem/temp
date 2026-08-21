@@ -1,3 +1,4 @@
 chainlit
 huggingface_hub
-python-dotenv
+langchain-community
+faiss-cpu
