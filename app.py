@@ -5,7 +5,7 @@ from huggingface_hub import AsyncInferenceClient
 
 # جلب المفاتيح والإعدادات
 HF_TOKEN = os.environ.get("HF_TOKEN")
-MODEL_ID = "Qwen/Qwen2.5-72B-Instruct"
+MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct"
 JSON_FILE_PATH = "qa_data.json"
 
 client = AsyncInferenceClient(model=MODEL_ID, token=HF_TOKEN)
