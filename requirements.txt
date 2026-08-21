@@ -1,8 +1,7 @@
 chainlit
-langchain
+langchain>=0.2.0
 langchain-community
 langchain-core
-langchain-classic
 langchain-huggingface
 langchain-qdrant
 qdrant-client
