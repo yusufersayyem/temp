@@ -1,13 +1,17 @@
 import os
-from groq import AsyncGroq
 import chainlit as cl
+from huggingface_hub import AsyncInferenceClient
 
-# تهيئة العميل باستعمال Async للسرعة والأداء
-client = AsyncGroq(api_key=os.environ.get("GROQ_API_KEY"))
+# الحصول على رمز التوثيق (Token) الخاص بـ Hugging Face
+HF_TOKEN = os.environ.get("HF_TOKEN")
+
+# اختيار نموذج Qwen المتاح على Hugging Face
+MODEL_ID = "Qwen/Qwen2.5-72B-Instruct"
+
+client = AsyncInferenceClient(model=MODEL_ID, token=HF_TOKEN)
 
 @cl.on_chat_start
 async def start_chat():
-    # إعداد السجل الأولي للمحادثة عند فتح المستخدم للصفحة
     cl.user_session.set(
         "message_history",
         [{"role": "system", "content": "أنت مساعد ذكي ولطيف تتحدث باللغة العربية."}]
@@ -15,26 +19,29 @@ async def start_chat():
 
 @cl.on_message
 async def main(message: cl.Message):
-    # جلب سجل المحادثة السابق
     message_history = cl.user_session.get("message_history")
     message_history.append({"role": "user", "content": message.content})
 
-    # إعداد رسالة فارغة في الشاشة لاستقبال الرد المباشر (Streaming)
     msg = cl.Message(content="")
     await msg.send()
 
-    # استدعاء نموذج Qwen عبر Groq بنفس أسلوب البث
-    stream = await client.chat.completions.create(
-        model="qwen-2.5-32b",
-        messages=message_history,
-        stream=True,
-    )
+    try:
+        # استدعاء نموذج Qwen عبر Hugging Face كبث مباشر (Streaming)
+        stream = await client.chat_completion(
+            messages=message_history,
+            max_tokens=1024,
+            stream=True
+        )
 
-    async for chunk in stream:
-        if chunk.choices[0].delta.content:
-            await msg.stream_token(chunk.choices[0].delta.content)
+        async for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta.content:
+                token = chunk.choices[0].delta.content
+                await msg.stream_token(token)
 
-    # تحديث النتيجة النهائية وحفظها في السجل
-    await msg.update()
-    message_history.append({"role": "assistant", "content": msg.content})
-    cl.user_session.set("message_history", message_history)
+        await msg.update()
+        message_history.append({"role": "assistant", "content": msg.content})
+        cl.user_session.set("message_history", message_history)
+
+    except Exception as e:
+        msg.content = f"حدث خطأ أثناء الاتصال بالنظام: {str(e)}"
+        await msg.update()
