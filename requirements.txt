@@ -2,8 +2,9 @@ chainlit
 langchain
 langchain-community
 langchain-core
+langchain-huggingface
 langchain-qdrant
 langchain-groq
-fastembed
 qdrant-client
 python-dotenv
+huggingface_hub
