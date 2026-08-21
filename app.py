@@ -3,7 +3,7 @@ import asyncio
 from dotenv import load_dotenv
 import chainlit as cl
 
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from langchain_groq import ChatGroq
 
@@ -17,17 +17,17 @@ load_dotenv()
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+HUGGINGFACEHUB_API_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 COLLECTION_NAME = "my_pdf_documents"
 
-# 1. إعداد BAAI/bge-m3 مع تقليل الاستهلاك لأقصى درجة (استخراج متجهات الأسئلة فقط)
-print("جاري تحميل نموذج التضمين...")
-embeddings = HuggingFaceEmbeddings(
-    model_name="BAAI/bge-m3",
-    model_kwargs={'device': 'cpu'},
-    encode_kwargs={'normalize_embeddings': True, 'batch_size': 1}
+# 1. استدعام BAAI/bge-m3 عبر الـ API سحابياً (بدون تنزيل أي شيء وبسرعة إقلاع خيالية)
+print("جاري الاتصال بـ Hugging Face API للـ Embeddings...")
+embeddings = HuggingFaceInferenceAPIEmbeddings(
+    api_key=HUGGINGFACEHUB_API_TOKEN,
+    model_name="BAAI/bge-m3"
 )
 
-# 2. ربط قاعدة البيانات Qdrant
+# 2. ربط Qdrant
 vector_store = QdrantVectorStore.from_existing_collection(
     embedding=embeddings,
     collection_name=COLLECTION_NAME,
@@ -36,7 +36,7 @@ vector_store = QdrantVectorStore.from_existing_collection(
 )
 retriever = vector_store.as_retriever(search_kwargs={"k": 3})
 
-# 3. إعداد النموذج اللغوي السريع جداً من Groq
+# 3. إعداد نموذج Groq السريع
 llm = ChatGroq(
     groq_api_key=GROQ_API_KEY,
     model_name="llama-3.3-70b-versatile",
