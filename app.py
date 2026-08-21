@@ -2,8 +2,9 @@ import os
 from dotenv import load_dotenv
 import chainlit as cl
 
-from langchain_huggingface import HuggingFaceEndpoint, HuggingFaceEndpointEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_qdrant import QdrantVectorStore
+from langchain_groq import ChatGroq
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
@@ -14,7 +15,7 @@ load_dotenv()
 # Variables
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-HUGGINGFACEHUB_API_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 COLLECTION_NAME = "my_pdf_documents"
 
 def format_docs(docs):
@@ -22,10 +23,11 @@ def format_docs(docs):
 
 @cl.on_chat_start
 async def on_chat_start():
-    # 1. استدعاء BAAI/bge-m3 عبر السحاب (Inference API) دون استهلاك memory الخادم
-    embeddings = HuggingFaceEndpointEmbeddings(
-        model="BAAI/bge-m3",
-        huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN
+    # 1. Embedding Model (تحميل خفيف جداً لنصوص الاستعلام القصيرة)
+    embeddings = HuggingFaceEmbeddings(
+        model_name="BAAI/bge-m3",
+        model_kwargs={'device': 'cpu'},
+        encode_kwargs={'normalize_embeddings': True}
     )
 
     # 2. Qdrant Retriever
@@ -37,13 +39,11 @@ async def on_chat_start():
     )
     retriever = vector_store.as_retriever(search_kwargs={"k": 3})
 
-    # 3. LLM Model (Qwen 2.5 7B)
-    llm = HuggingFaceEndpoint(
-        repo_id="Qwen/Qwen2.5-7B-Instruct",
-        huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN,
-        temperature=0.2,
-        max_new_tokens=512,
-        timeout=60
+    # 3. LLM عبر Groq (استجابة فائقة السرعة مع دعم قوي للغة العربية)
+    llm = ChatGroq(
+        groq_api_key=GROQ_API_KEY,
+        model_name="qwen-2.5-32b", # أو llama-3.3-70b-versatile
+        temperature=0.2
     )
 
     # 4. Prompt Template
@@ -77,8 +77,8 @@ async def on_message(message: cl.Message):
     msg = cl.Message(content="")
     await msg.send()
 
-    async_chain = cl.make_async(rag_chain.invoke)
-    response_text = await async_chain(message.content)
-    
-    msg.content = response_text
+    # بث الإجابة تدريجياً (Streaming) لإلغاء أي إحساس بالبطء
+    async for chunk in rag_chain.astream(message.content):
+        await msg.stream_token(chunk)
+        
     await msg.update()
