@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 import chainlit as cl
 
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings import FastEmbedEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from langchain_groq import ChatGroq
 
@@ -23,11 +23,9 @@ def format_docs(docs):
 
 @cl.on_chat_start
 async def on_chat_start():
-    # 1. Embedding Model (تحميل خفيف جداً لنصوص الاستعلام القصيرة)
-    embeddings = HuggingFaceEmbeddings(
-        model_name="BAAI/bge-m3",
-        model_kwargs={'device': 'cpu'},
-        encode_kwargs={'normalize_embeddings': True}
+    # 1. استخدام FastEmbed لنموذج bge-m3 (خفيف جداً على الذاكرة ومطابق لبياناتك)
+    embeddings = FastEmbedEmbeddings(
+        model_name="BAAI/bge-m3"
     )
 
     # 2. Qdrant Retriever
@@ -39,10 +37,10 @@ async def on_chat_start():
     )
     retriever = vector_store.as_retriever(search_kwargs={"k": 3})
 
-    # 3. LLM عبر Groq (استجابة فائقة السرعة مع دعم قوي للغة العربية)
+    # 3. LLM عبر Groq (سريع جداً ودقيق)
     llm = ChatGroq(
         groq_api_key=GROQ_API_KEY,
-        model_name="qwen-2.5-32b", # أو llama-3.3-70b-versatile
+        model_name="llama-3.3-70b-versatile",
         temperature=0.2
     )
 
@@ -77,7 +75,7 @@ async def on_message(message: cl.Message):
     msg = cl.Message(content="")
     await msg.send()
 
-    # بث الإجابة تدريجياً (Streaming) لإلغاء أي إحساس بالبطء
+    # بث الإجابة بشكل تدريجي مريح وسريع
     async for chunk in rag_chain.astream(message.content):
         await msg.stream_token(chunk)
         
