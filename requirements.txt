@@ -7,4 +7,3 @@ langchain-qdrant
 qdrant-client
 python-dotenv
 huggingface_hub
-sentence-transformers
