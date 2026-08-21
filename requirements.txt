@@ -5,6 +5,7 @@ langchain-core
 langchain-huggingface
 langchain-qdrant
 langchain-groq
+grog
 qdrant-client
 python-dotenv
 huggingface_hub
