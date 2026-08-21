@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 import chainlit as cl
 
-from langchain_huggingface import HuggingFaceEmbeddings, HuggingFaceEndpoint
+from langchain_huggingface import HuggingFaceEndpoint, HuggingFaceEndpointEmbeddings
 from langchain_qdrant import QdrantVectorStore
 
 from langchain_core.prompts import ChatPromptTemplate
@@ -22,11 +22,10 @@ def format_docs(docs):
 
 @cl.on_chat_start
 async def on_chat_start():
-    # 1. Light-weight Embeddings Model initialization
-    embeddings = HuggingFaceEmbeddings(
-        model_name="BAAI/bge-m3",
-        model_kwargs={'device': 'cpu'},
-        encode_kwargs={'normalize_embeddings': True}
+    # 1. استدعاء BAAI/bge-m3 عبر السحاب (Inference API) دون استهلاك memory الخادم
+    embeddings = HuggingFaceEndpointEmbeddings(
+        model="BAAI/bge-m3",
+        huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN
     )
 
     # 2. Qdrant Retriever
@@ -38,7 +37,7 @@ async def on_chat_start():
     )
     retriever = vector_store.as_retriever(search_kwargs={"k": 3})
 
-    # 3. LLM Model
+    # 3. LLM Model (Qwen 2.5 7B)
     llm = HuggingFaceEndpoint(
         repo_id="Qwen/Qwen2.5-7B-Instruct",
         huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN,
@@ -47,7 +46,7 @@ async def on_chat_start():
         timeout=60
     )
 
-    # 4. System Prompt Template
+    # 4. Prompt Template
     template = """أنت مساعد ذكي ومؤدب متخصص في الإجابة على استفسارات تربية نينوى.
 استخدم المعلومات الواردة في السياق المرفق فقط للإجابة على سؤال المستخدم.
 إذا لم تجد الإجابة في السياق، قل بوضوح: 'عذراً، لا تتوفر هذه المعلومة ضمن بيانات تربية نينوى المتاحة حالياً.' ولا تقم بابتكار إجابات من عندك.
@@ -75,11 +74,9 @@ async def on_chat_start():
 async def on_message(message: cl.Message):
     rag_chain = cl.user_session.get("rag_chain")
     
-    # رسالة مؤقتة لتأكيد الاتصال بالخادم
     msg = cl.Message(content="")
     await msg.send()
 
-    # استخدام cl.make_async لعدم إغلاق الـ WebSocket أثناء الاستعلام
     async_chain = cl.make_async(rag_chain.invoke)
     response_text = await async_chain(message.content)
     
