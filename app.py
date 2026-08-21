@@ -1,49 +1,82 @@
 import os
+from dotenv import load_dotenv
 import chainlit as cl
-from huggingface_hub import InferenceClient
 
-HF_TOKEN = os.environ.get("HF_TOKEN")
-client = InferenceClient(
-    model="meta-llama/Llama-3.3-70B-Instruct",
-    token=HF_TOKEN
-)
+from langchain_huggingface import HuggingFaceEmbeddings, HuggingFaceEndpoint
+from langchain_qdrant import QdrantVectorStore
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.prompts import ChatPromptTemplate
+
+load_dotenv()
+
+# Variables
+QDRANT_URL = os.getenv("QDRANT_URL")
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
+HUGGINGFACEHUB_API_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
+COLLECTION_NAME = "my_pdf_documents"
 
 @cl.on_chat_start
-async def start():
-    if not HF_TOKEN:
-        await cl.Message(content="⚠️ يرجى إضافة HF_TOKEN في متغيرات البيئة!").send()
-        return
-
-    cl.user_session.set("message_history", [
-        {"role": "system", "content": "أنت مساعد ذكي ومفيد تتحدث باللغة العربية دائماً."}
-    ])
-    await cl.Message(content="مرحباً بك! كيف يمكنني مساعدتك اليوم؟").send()
-
-@cl.on_message
-async def main(message: cl.Message):
-    history = cl.user_session.get("message_history", [])
-    history.append({"role": "user", "content": message.content})
-
-    msg = cl.Message(content="")
+async def on_chat_start():
+    cl.user_session.set("history", [])
+    msg = cl.Message(content="جاري الاتصال بالنموذج وقاعدة البيانات...")
     await msg.send()
 
-    try:
-        response = client.chat_completion(
-            messages=history,
-            max_tokens=1000,
-            stream=True
-        )
+    # 1. Embedding Model
+    embeddings = HuggingFaceEmbeddings(
+        model_name="BAAI/bge-m3",
+        model_kwargs={'device': 'cpu'},
+        encode_kwargs={'normalize_embeddings': True}
+    )
 
-        full_response = ""
-        for chunk in response:
-            if chunk.choices and chunk.choices[0].delta.content:
-                token = chunk.choices[0].delta.content
-                await msg.stream_token(token)
-                full_response += token
+    # 2. Qdrant Retriever
+    vector_store = QdrantVectorStore.from_existing_collection(
+        embedding=embeddings,
+        collection_name=COLLECTION_NAME,
+        url=QDRANT_URL,
+        api_key=QDRANT_API_KEY
+    )
+    retriever = vector_store.as_retriever(search_kwargs={"k": 3})
 
-        await msg.update()
-        history.append({"role": "assistant", "content": full_response})
-        cl.user_session.set("message_history", history)
+    # 3. LLM (Qwen 2.5 7B via Hugging Face API)
+    llm = HuggingFaceEndpoint(
+        repo_id="Qwen/Qwen2.5-7B-Instruct",
+        huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN,
+        temperature=0.2,
+        max_new_tokens=512
+    )
 
-    except Exception as e:
-        await cl.Message(content=f"⚠️ حدث خطأ أثناء الاتصال بالنموذج:\n`{str(e)}`").send()
+    # 4. System Prompt
+    system_prompt = (
+        "أنت مساعد ذكي ومؤدب متخصص في الإجابة على استفسارات تربية نينوى.\n"
+        "استخدم المعلومات الواردة في السياق المرفق فقط للإجابة على سؤال المستخدم.\n"
+        "إذا لم تجد الإجابة في السياق، قل بوضوح: 'عذراً، لا تتوفر هذه المعلومة ضمن بيانات تربية نينوى المتاحة حالياً.' ولا تقم بابتكار إجابات من عندك.\n\n"
+        "السياق المتاح:\n{context}"
+    )
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        ("human", "{input}"),
+    ])
+
+    # 5. Build RAG Chain
+    question_answer_chain = create_stuff_documents_chain(llm, prompt)
+    rag_chain = create_retrieval_chain(retriever, question_answer_chain)
+
+    cl.user_session.set("rag_chain", rag_chain)
+    
+    msg.content = "أهلاً بك! أنا مساعدك الذكي الخاص بتربية نينوى. كيف يمكنني مساعدتك اليوم؟"
+    await msg.update()
+
+@cl.on_message
+async def on_message(message: cl.Message):
+    rag_chain = cl.user_session.get("rag_chain")
+    
+    cb = cl.LangChainCallbackHandler()
+    
+    res = await rag_chain.ainvoke(
+        {"input": message.content},
+        callbacks=[cb]
+    )
+    
+    await cl.Message(content=res["answer"]).send()
