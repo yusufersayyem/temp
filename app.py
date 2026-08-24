@@ -15,16 +15,14 @@ OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
 EMBEDDING_MODEL_ID = "BAAI/bge-m3"
 FAISS_INDEX_PATH = "faiss_index"
 
-# ==========================================
-# 2. تهيئة عميل OpenRouter
-# ==========================================
+# تهيئة عميل OpenRouter
 llm_client = AsyncOpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=OPENROUTER_API_KEY,
 )
 
 # ==========================================
-# 3. كلاس الـ Embeddings الخاص بـ HuggingFace
+# 2. كلاس الـ Embeddings الخاص بـ HuggingFace
 # ==========================================
 class DirectHFEmbeddings(Embeddings):
     def __init__(self, model_name: str, token: str):
@@ -52,11 +50,8 @@ class DirectHFEmbeddings(Embeddings):
         response = self.client.feature_extraction(text)
         return self._process_response(response)
 
-# ==========================================
-# 4. تحميل قاعدة البيانات المتجهة FAISS
-# ==========================================
+# تحميل FAISS
 embeddings = DirectHFEmbeddings(model_name=EMBEDDING_MODEL_ID, token=HF_TOKEN)
-
 vector_store = FAISS.load_local(
     FAISS_INDEX_PATH, 
     embeddings, 
@@ -64,56 +59,49 @@ vector_store = FAISS.load_local(
 )
 
 # ==========================================
-# 5. معالجة رسائل المستخدم في Chainlit
+# 3. معالجة الرسائل مع Ling-3.0-flash
 # ==========================================
 @cl.on_message
 async def main(message: cl.Message):
     try:
-        # البحث في FAISS عن السياق المناسب
+        # البحث في FAISS
         docs = await asyncio.to_thread(
             vector_store.similarity_search, message.content, k=2
         )
 
-        if docs:
-            context = "\n\n".join([d.page_content for d in docs])
-        else:
-            context = "لا يوجد سياق متوفر في قاعدة البيانات لهذا السؤال."
+        context = "\n\n".join([d.page_content for d in docs]) if docs else "لا يوجد سياق متوفر."
 
-        # تعليمات النظام الموجهة باللغة العربية
-        system_instruction = f"""أنت مساعد ذكي ومفيد تتحدث باللغة العربية الفصحى الواضحة والودودة.
-أجب على سؤال المستخدم بالاعتماد بشكل أساسي ومباشر على السياق المرفق أدناه.
-إذا لم تجد الإجابة بشكل واضح في السياق، أبلغ المستخدم بذلك بلباقة ودون اختلاق معلومات.
-
-السياق المتاح:
+        system_instruction = f"""أنت مساعد ذكي ومفيد لتربية نينوى. أجب باللغة العربية بناءً على السياق أدناه:
+        
+السياق:
 {context}"""
 
-        # إنشاء رسالة فارغة لبدء دفق الإجابة (Streaming)
         msg = cl.Message(content="")
         await msg.send()
 
-        # إرسال الطلب مع استخدام النموذج بحجم 32B وتمرير الترويسات بحسب وثائق OpenRouter
+        # إرسال الطلب لنموذج Ling-3.0-flash مع ميزة Reasoning
         stream_response = await llm_client.chat.completions.create(
-            model="qwen/qwen-2.5-coder-32b-instruct",  # أو يمكنك استخدام "qwen/qwen-2.5-32b-instruct"
+            model="inclusionai/ling-3.0-flash",
             extra_headers={
                 "HTTP-Referer": "https://localhost",
                 "X-Title": "Nineveh Edu Chatbot",
+            },
+            extra_body={
+                "reasoning": {"enabled": True}
             },
             messages=[
                 {"role": "system", "content": system_instruction},
                 {"role": "user", "content": message.content}
             ],
-            temperature=0.3,
-            max_tokens=400,
             stream=True
         )
 
-        # استلام الإجابة وطباعتها فوراً
+        # دفق النتيجة للمستخدم
         async for chunk in stream_response:
             if chunk.choices and chunk.choices[0].delta.content:
                 token = chunk.choices[0].delta.content
                 await msg.stream_token(token)
 
-        # إنهاء البث
         await msg.update()
 
     except Exception as e:
