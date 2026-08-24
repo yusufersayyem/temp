@@ -22,8 +22,8 @@ llm_client = AsyncOpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=OPENROUTER_API_KEY,
     default_headers={
-        "HTTP-Referer": "https://localhost",  # يمكنك تغييره لرابط موقعك عند النشر
-        "X-Title": "Arabic Assistance Chatbot",  # اسم تطبيقك في لوحة تحكم OpenRouter
+        "HTTP-Referer": "https://localhost",  # يمكنك استبدالها برابط تطبيقك
+        "X-Title": "Nineveh Edu Chatbot",     # اسم التطبيق
     }
 )
 
@@ -73,7 +73,7 @@ vector_store = FAISS.load_local(
 @cl.on_message
 async def main(message: cl.Message):
     try:
-        # البحث في FAISS عن السياق المناسب (k=2 لتوفير التكلفة وزيادة الدقة)
+        # البحث في FAISS عن السياق المناسب (k=2 للحفاظ على كفاءة الـ RAG وتقليل التكلفة)
         docs = await asyncio.to_thread(
             vector_store.similarity_search, message.content, k=2
         )
@@ -83,7 +83,7 @@ async def main(message: cl.Message):
         else:
             context = "لا يوجد سياق متوفر في قاعدة البيانات لهذا السؤال."
 
-        # صياغة تعليمات النظام (System Prompt) لضمان الدقة وتجنب التخيل
+        # تعليمات النظام الموجهة باللغة العربية
         system_instruction = f"""أنت مساعد ذكي ومفيد تتحدث باللغة العربية الفصحى الواضحة والودودة.
 أجب على سؤال المستخدم بالاعتماد بشكل أساسي ومباشر على السياق المرفق أدناه.
 إذا لم تجد الإجابة بشكل واضح في السياق، أبلغ المستخدم بذلك بلباقة ودون اختلاق معلومات.
@@ -95,29 +95,32 @@ async def main(message: cl.Message):
         msg = cl.Message(content="")
         await msg.send()
 
-        # إرسال الطلب للنموذج (يمكنك تغيير اسم النموذج بسهولة هنا)
-        # خيارات ممتازة للتجربة:
-        # - "deepseek/deepseek-chat" (الأعلى دقة ولغةً)
-        # - "qwen/qwen-2.5-14b-instruct" (ترقية دقة كوين مع تكلفة رخيصة)
-        # - "openai/gpt-4o-mini" (الخيار التجاري الأعلى ضبطاً)
+        # إرسال الطلب لـ Qwen-14B مع نماذج احتياطية (Fallbacks) لضمان عدم توقف الخدمة
         stream_response = await llm_client.chat.completions.create(
-            model="deepseek/deepseek-chat",
+            model="qwen/qwen-2.5-14b-instruct",
+            extra_body={
+                "models": [
+                    "qwen/qwen-2.5-14b-instruct",
+                    "qwen/qwen-2.5-32b-instruct",
+                    "qwen/qwen-2.5-7b-instruct"
+                ]
+            },
             messages=[
                 {"role": "system", "content": system_instruction},
                 {"role": "user", "content": message.content}
             ],
-            temperature=0.3,   # درجة انضباط عالية للمحافظة على سياق FAISS
-            max_tokens=400,    # تقييد طول الإجابة لحفظ التوكنز والتكلفة
+            temperature=0.3,   # انضباط عالي باللغة والسياق
+            max_tokens=400,    # تقييد طول الإجابة لتقليل التكلفة
             stream=True
         )
 
-        # استلام الإجابة وطباعتها حرفاً بحرف
+        # استلام الإجابة وطباعتها فوراً للمستخدم
         async for chunk in stream_response:
             if chunk.choices and chunk.choices[0].delta.content:
                 token = chunk.choices[0].delta.content
                 await msg.stream_token(token)
 
-        # إنهاء البث وحفظ الرسالة الكاملة
+        # إنهاء البث
         await msg.update()
 
     except Exception as e:
