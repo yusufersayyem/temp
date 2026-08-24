@@ -17,6 +17,10 @@ FAISS_INDEX_PATH = "faiss_index"
 llm_client = AsyncOpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=OPENROUTER_API_KEY,
+    default_headers={
+        "HTTP-Referer": "https://localhost",  # يمكنك استبدالها برابط موقعك/تطبيقك إذا وجد
+        "X-Title": "Arabic Qwen Chatbot",    # اسم تطبيقك لتصنيف الطلبات
+    }
 )
 
 # 3. كلاس الـ Embeddings الخاص بـ HuggingFace
@@ -59,7 +63,7 @@ vector_store = FAISS.load_local(
 @cl.on_message
 async def main(message: cl.Message):
     try:
-        # البحث في FAISS عن السياق المناسب (k=2 للحصول على معلومات أكثر كفاية)
+        # البحث في FAISS عن السياق المناسب (k=2 للحصول على معلومات كافية)
         docs = await asyncio.to_thread(
             vector_store.similarity_search, message.content, k=2
         )
@@ -69,27 +73,31 @@ async def main(message: cl.Message):
         else:
             context = "لا يوجد سياق متوفر في قاعدة البيانات."
 
-        # صياغة الـ Prompt الموجه لـ stealth/ox-alpha
-        prompt = f"""أنت مساعد ذكي ومفيد. أجب على سؤال المستخدم بالاعتماد بشكل أساسي على السياق المرفق أدناه.
+        # صياغة التعليمات البرمجية الهيكلية (System Prompt) لتأطير النموذج
+        system_instruction = f"""أنت مساعد ذكي ومفيد تتحدث باللغة العربية الفصحى الواضحة والودودة.
+أجب على سؤال المستخدم بالاعتماد بشكل أساسي ومباشر على السياق المرفق أدناه.
+إذا لم تجد الإجابة في السياق، أبلغ المستخدم بذلك بلباقة.
 
 السياق المتاح:
-{context}
-
-سؤال المستخدم:
-{message.content}"""
+{context}"""
 
         # إنشاء رسالة فارغة لبدء دفق الإجابة (Streaming)
         msg = cl.Message(content="")
         await msg.send()
 
-        # إرسال الطلب لنموذج stealth/ox-alpha عبر OpenRouter
+        # إرسال الطلب لنموذج Qwen2.5 7B Instruct عبر OpenRouter
         stream_response = await llm_client.chat.completions.create(
-            model="stealth/ox-alpha",
-            messages=[{"role": "user", "content": prompt}],
+            model="qwen/qwen-2.5-7b-instruct",
+            messages=[
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": message.content}
+            ],
+            temperature=0.3,    # ضبط درجة الابتكار لمنع التخيل أو الخروج عن السياق
+            max_tokens=400,     # حد أقصى للرد لتقليل استهلاك التوكنز والحفاظ على السعر الأرخص
             stream=True
         )
 
-        # استلام الإجابة طباعة كل حرف/كلمة فور ظهورها
+        # استلام الإجابة وطباعة كل حرف/كلمة فور ظهورها
         async for chunk in stream_response:
             if chunk.choices and chunk.choices[0].delta.content:
                 token = chunk.choices[0].delta.content
