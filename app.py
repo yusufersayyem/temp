@@ -15,7 +15,7 @@ OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
 EMBEDDING_MODEL_ID = "BAAI/bge-m3"
 FAISS_INDEX_PATH = "faiss_index"
 
-# تهيئة عميل OpenRouter
+# تهيئة عميل OpenRouter (AsyncOpenAI)
 llm_client = AsyncOpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=OPENROUTER_API_KEY,
@@ -50,7 +50,7 @@ class DirectHFEmbeddings(Embeddings):
         response = self.client.feature_extraction(text)
         return self._process_response(response)
 
-# تحميل FAISS
+# تحميل قاعدة بيانات FAISS عند بدء التشغيل
 embeddings = DirectHFEmbeddings(model_name=EMBEDDING_MODEL_ID, token=HF_TOKEN)
 vector_store = FAISS.load_local(
     FAISS_INDEX_PATH, 
@@ -59,27 +59,29 @@ vector_store = FAISS.load_local(
 )
 
 # ==========================================
-# 3. معالجة الرسائل مع Ling-3.0-flash
+# 3. معالجة الرسائل واستدعاء النموذج
 # ==========================================
 @cl.on_message
 async def main(message: cl.Message):
     try:
-        # البحث في FAISS
+        # البحث عن أكثر مستندين مرتبطين بسؤال المستخدم في FAISS
         docs = await asyncio.to_thread(
             vector_store.similarity_search, message.content, k=2
         )
 
         context = "\n\n".join([d.page_content for d in docs]) if docs else "لا يوجد سياق متوفر."
 
-        system_instruction = f"""أنت مساعد ذكي ومفيد لتربية نينوى. أجب باللغة العربية بناءً على السياق أدناه:
-        
-السياق:
+        # تعليمات النظام الموجهة للنموذج
+        system_instruction = f"""أنت مساعد ذكي ومفيد مخصص لخدمة موظفي ومراجعي المديرية العامة لتربية نينوى. 
+أجب عن سؤال المستخدم باللغة العربية بأسلوب واضح ومباشر بناءً على السياق المرفق أدناه فقط.
+
+السياق المتاح:
 {context}"""
 
         msg = cl.Message(content="")
         await msg.send()
 
-        # إرسال الطلب لنموذج Ling-3.0-flash مع ميزة Reasoning
+        # إرسال الطلب لنموذج Ling-3.0-flash مع إيقاف الـ Reasoning للبث المباشر المباشر
         stream_response = await llm_client.chat.completions.create(
             model="inclusionai/ling-3.0-flash",
             extra_headers={
@@ -87,7 +89,7 @@ async def main(message: cl.Message):
                 "X-Title": "Nineveh Edu Chatbot",
             },
             extra_body={
-                "reasoning": {"enabled": True}
+                "reasoning": {"enabled": False}  # إيقاف التفكير الداخلي لسرعة وإجابة مباشرة
             },
             messages=[
                 {"role": "system", "content": system_instruction},
@@ -96,7 +98,7 @@ async def main(message: cl.Message):
             stream=True
         )
 
-        # دفق النتيجة للمستخدم
+        # بث الإجابة حافلة بالحروف تدريجياً للمستخدم
         async for chunk in stream_response:
             if chunk.choices and chunk.choices[0].delta.content:
                 token = chunk.choices[0].delta.content
@@ -105,4 +107,4 @@ async def main(message: cl.Message):
         await msg.update()
 
     except Exception as e:
-        await cl.Message(content=f"حدث خطأ أثناء الاتصال بالنظام: {str(e)}").send()
+        await cl.Message(content=f"حدث خطأ أثناء معالجة الطلب: {str(e)}").send()
