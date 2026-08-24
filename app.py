@@ -16,15 +16,11 @@ EMBEDDING_MODEL_ID = "BAAI/bge-m3"
 FAISS_INDEX_PATH = "faiss_index"
 
 # ==========================================
-# 2. تهيئة عميل OpenRouter (باستخدام AsyncOpenAI)
+# 2. تهيئة عميل OpenRouter
 # ==========================================
 llm_client = AsyncOpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=OPENROUTER_API_KEY,
-    default_headers={
-        "HTTP-Referer": "https://localhost",  # يمكنك استبدالها برابط تطبيقك
-        "X-Title": "Nineveh Edu Chatbot",     # اسم التطبيق
-    }
 )
 
 # ==========================================
@@ -73,7 +69,7 @@ vector_store = FAISS.load_local(
 @cl.on_message
 async def main(message: cl.Message):
     try:
-        # البحث في FAISS عن السياق المناسب (k=2 للحفاظ على كفاءة الـ RAG وتقليل التكلفة)
+        # البحث في FAISS عن السياق المناسب
         docs = await asyncio.to_thread(
             vector_store.similarity_search, message.content, k=2
         )
@@ -95,26 +91,23 @@ async def main(message: cl.Message):
         msg = cl.Message(content="")
         await msg.send()
 
-        # إرسال الطلب لـ Qwen-14B مع نماذج احتياطية (Fallbacks) لضمان عدم توقف الخدمة
+        # إرسال الطلب مع استخدام النموذج بحجم 32B وتمرير الترويسات بحسب وثائق OpenRouter
         stream_response = await llm_client.chat.completions.create(
-            model="qwen/qwen-2.5-14b-instruct",
-            extra_body={
-                "models": [
-                    "qwen/qwen-2.5-14b-instruct",
-                    "qwen/qwen-2.5-32b-instruct",
-                    "qwen/qwen-2.5-7b-instruct"
-                ]
+            model="qwen/qwen-2.5-coder-32b-instruct",  # أو يمكنك استخدام "qwen/qwen-2.5-32b-instruct"
+            extra_headers={
+                "HTTP-Referer": "https://localhost",
+                "X-Title": "Nineveh Edu Chatbot",
             },
             messages=[
                 {"role": "system", "content": system_instruction},
                 {"role": "user", "content": message.content}
             ],
-            temperature=0.3,   # انضباط عالي باللغة والسياق
-            max_tokens=400,    # تقييد طول الإجابة لتقليل التكلفة
+            temperature=0.3,
+            max_tokens=400,
             stream=True
         )
 
-        # استلام الإجابة وطباعتها فوراً للمستخدم
+        # استلام الإجابة وطباعتها فوراً
         async for chunk in stream_response:
             if chunk.choices and chunk.choices[0].delta.content:
                 token = chunk.choices[0].delta.content
