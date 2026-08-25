@@ -1,4 +1,5 @@
 import os
+import re
 import asyncio
 from typing import List
 import chainlit as cl
@@ -15,11 +16,25 @@ OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
 EMBEDDING_MODEL_ID = "BAAI/bge-m3"
 FAISS_INDEX_PATH = "faiss_index"
 
-# تهيئة عميل OpenRouter (AsyncOpenAI)
 llm_client = AsyncOpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=OPENROUTER_API_KEY,
 )
+
+# كلمات حظر البرمجة
+CODING_KEYWORDS = [
+    r"\bpython\b", r"\bjavascript\b", r"\bhtml\b", r"\bcss\b", r"\bjava\b", 
+    r"\bc\+\+\b", r"\bphp\b", r"\bsql\b", r"\bcode\b", r"\bscript\b",
+    r"اكتب كود", r"كود برلمجي", r"برمج لي", r"دالة", r"خوارزمية", r"تصحيح الكود",
+    r"function\s*\(", r"def\s+\w+\(", r"import\s+\w+", r"class\s+\w+"
+]
+
+def is_coding_request(text: str) -> bool:
+    text_lower = text.lower()
+    for pattern in CODING_KEYWORDS:
+        if re.search(pattern, text_lower):
+            return True
+    return False
 
 # ==========================================
 # 2. كلاس الـ Embeddings الخاص بـ HuggingFace
@@ -50,7 +65,6 @@ class DirectHFEmbeddings(Embeddings):
         response = self.client.feature_extraction(text)
         return self._process_response(response)
 
-# تحميل قاعدة بيانات FAISS عند بدء التشغيل
 embeddings = DirectHFEmbeddings(model_name=EMBEDDING_MODEL_ID, token=HF_TOKEN)
 vector_store = FAISS.load_local(
     FAISS_INDEX_PATH, 
@@ -59,21 +73,30 @@ vector_store = FAISS.load_local(
 )
 
 # ==========================================
-# 3. معالجة الرسائل واستدعاء النموذج
+# 3. معالجة الرسائل
 # ==========================================
 @cl.on_message
 async def main(message: cl.Message):
+    # 1. تصفية الطلبات البرمجية فوراً
+    if is_coding_request(message.content):
+        await cl.Message(
+            content="عذراً، هذا الشاتبوت مخصص فقط للإجابة عن استفسارات ومعاملات المديرية العامة لتربية نينوى ولا يقدم خدمات برمجية."
+        ).send()
+        return
+
     try:
-        # البحث عن أكثر مستندين مرتبطين بسؤال المستخدم في FAISS
         docs = await asyncio.to_thread(
             vector_store.similarity_search, message.content, k=2
         )
 
         context = "\n\n".join([d.page_content for d in docs]) if docs else "لا يوجد سياق متوفر."
 
-        # تعليمات النظام الموجهة للنموذج
+        # 2. تعزيز التعليمات بعدم الإجابة عن البرمجة
         system_instruction = f"""أنت مساعد ذكي ومفيد مخصص لخدمة موظفي ومراجعي المديرية العامة لتربية نينوى. 
-أجب عن سؤال المستخدم باللغة العربية بأسلوب واضح ومباشر بناءً على السياق المرفق أدناه فقط.
+
+قواعد صارمة:
+- أجب عن سؤال المستخدم باللغة العربية بناءً على السياق المرفق فقط.
+- يمنع منعاً باتاً تقديم أي أكواد برمجية أو الإجابة عن أسئلة البرمجة والتطوير.
 
 السياق المتاح:
 {context}"""
@@ -81,9 +104,8 @@ async def main(message: cl.Message):
         msg = cl.Message(content="")
         await msg.send()
 
-        # إرسال الطلب لنموذج IBM Granite 4.0 Micro
         stream_response = await llm_client.chat.completions.create(
-            model="ibm-granite/granite-4.0-h-micro",
+            model="meta-llama/llama-3.1-8b-instruct",
             extra_headers={
                 "HTTP-Referer": "https://localhost",
                 "X-Title": "Nineveh Edu Chatbot",
@@ -95,7 +117,6 @@ async def main(message: cl.Message):
             stream=True
         )
 
-        # بث الإجابة تدريجياً للمستخدم
         async for chunk in stream_response:
             if chunk.choices and chunk.choices[0].delta.content:
                 token = chunk.choices[0].delta.content
