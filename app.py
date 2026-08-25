@@ -81,9 +81,9 @@ async def main(message: cl.Message):
         msg = cl.Message(content="")
         await msg.send()
 
-        # إرسال الطلب لنموذج Liquid LFM 2.5-2.6B المجاني
+        # إرسال الطلب لنموذج Google Gemma 4 26B A4B (المجاني)
         stream_response = await llm_client.chat.completions.create(
-            model="liquid/lfm-2.5-2.6b:free",
+            model="google/gemma-4-26b-a4b-it:free",
             extra_headers={
                 "HTTP-Referer": "https://localhost",
                 "X-Title": "Nineveh Edu Chatbot",
