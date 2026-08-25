@@ -81,19 +81,12 @@ async def main(message: cl.Message):
         msg = cl.Message(content="")
         await msg.send()
 
-        # إرسال الطلب لنموذج Mistral Nemo التجاري عبر OpenRouter
+        # إرسال الطلب لنموذج Meta Llama 3.1 8B Instruct
         stream_response = await llm_client.chat.completions.create(
-            model="mistralai/mistral-nemo",
+            model="meta-llama/llama-3.1-8b-instruct",
             extra_headers={
                 "HTTP-Referer": "https://localhost",
                 "X-Title": "Nineveh Edu Chatbot",
-            },
-            extra_body={
-                # اختيار أسرع وأثبت المزودين المعروضين في إحصائيات OpenRouter
-                "provider": {
-                    "order": ["parasail", "mistral", "deepinfra"],
-                    "allow_fallbacks": True
-                }
             },
             messages=[
                 {"role": "system", "content": system_instruction},
