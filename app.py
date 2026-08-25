@@ -81,12 +81,19 @@ async def main(message: cl.Message):
         msg = cl.Message(content="")
         await msg.send()
 
-        # إرسال الطلب لنموذج Google Gemma 4 26B A4B (المجاني)
+        # إرسال الطلب لنموذج Mistral Nemo التجاري عبر OpenRouter
         stream_response = await llm_client.chat.completions.create(
-            model="google/gemma-4-26b-a4b-it:free",
+            model="mistralai/mistral-nemo",
             extra_headers={
                 "HTTP-Referer": "https://localhost",
                 "X-Title": "Nineveh Edu Chatbot",
+            },
+            extra_body={
+                # اختيار أسرع وأثبت المزودين المعروضين في إحصائيات OpenRouter
+                "provider": {
+                    "order": ["parasail", "mistral", "deepinfra"],
+                    "allow_fallbacks": True
+                }
             },
             messages=[
                 {"role": "system", "content": system_instruction},
