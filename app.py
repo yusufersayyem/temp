@@ -81,9 +81,9 @@ async def main(message: cl.Message):
         msg = cl.Message(content="")
         await msg.send()
 
-        # إرسال الطلب لنموذج DeepSeek V4 Flash
+        # إرسال الطلب لنموذج Liquid LFM 2.5-2.6B المجاني
         stream_response = await llm_client.chat.completions.create(
-            model="deepseek/deepseek-v4-flash-0731",
+            model="liquid/lfm-2.5-2.6b:free",
             extra_headers={
                 "HTTP-Referer": "https://localhost",
                 "X-Title": "Nineveh Edu Chatbot",
