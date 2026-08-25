@@ -81,15 +81,12 @@ async def main(message: cl.Message):
         msg = cl.Message(content="")
         await msg.send()
 
-        # إرسال الطلب لنموذج Ling-3.0-flash مع إيقاف الـ Reasoning للبث المباشر المباشر
+        # إرسال الطلب لنموذج DeepSeek V4 Flash
         stream_response = await llm_client.chat.completions.create(
-            model="inclusionai/ling-3.0-flash",
+            model="deepseek/deepseek-v4-flash-0731",
             extra_headers={
                 "HTTP-Referer": "https://localhost",
                 "X-Title": "Nineveh Edu Chatbot",
-            },
-            extra_body={
-                "reasoning": {"enabled": False}  # إيقاف التفكير الداخلي لسرعة وإجابة مباشرة
             },
             messages=[
                 {"role": "system", "content": system_instruction},
@@ -98,7 +95,7 @@ async def main(message: cl.Message):
             stream=True
         )
 
-        # بث الإجابة حافلة بالحروف تدريجياً للمستخدم
+        # بث الإجابة تدريجياً للمستخدم
         async for chunk in stream_response:
             if chunk.choices and chunk.choices[0].delta.content:
                 token = chunk.choices[0].delta.content
