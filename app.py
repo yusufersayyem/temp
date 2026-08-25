@@ -81,9 +81,9 @@ async def main(message: cl.Message):
         msg = cl.Message(content="")
         await msg.send()
 
-        # إرسال الطلب لنموذج Meta Llama 3.1 8B Instruct
+        # إرسال الطلب لنموذج IBM Granite 4.0 Micro
         stream_response = await llm_client.chat.completions.create(
-            model="meta-llama/llama-3.1-8b-instruct",
+            model="ibm-granite/granite-4.0-h-micro",
             extra_headers={
                 "HTTP-Referer": "https://localhost",
                 "X-Title": "Nineveh Edu Chatbot",
