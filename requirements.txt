@@ -1,3 +1,2 @@
 chainlit
-scikit-learn==1.6.1
-nltk
+scikit-learn
