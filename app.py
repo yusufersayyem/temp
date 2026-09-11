@@ -14,7 +14,7 @@ patterns_list = []
 intents_mapping = []
 patterns_embeddings = None
 
-def load_and_embed_intents(json_path="intents.json"):
+def load_and_embed_intents(json_path="intent.json"):
     global patterns_list, intents_mapping, patterns_embeddings
     
     with open(json_path, "r", encoding="utf-8") as f:
@@ -32,30 +32,29 @@ def load_and_embed_intents(json_path="intents.json"):
             
     print("جاري استدعاء Cohere API لحساب متجهات الـ patterns...")
     
-    # طلب الـ Embeddings عبر API بدعم ممتاز للعربية
+    # استخدام النموذج المتعدد اللغات المعتمد ليدعم العربية بدقة عالية
     response = co.embed(
         texts=patterns_list,
-        model="embed-arabic-v3.0",
+        model="embed-multilingual-v3.0",
         input_type="search_document"
     )
     
-    # تحويل النتيجة إلى NumPy Array مع معايرة المتجهات
+    # تحويل النتيجة إلى NumPy Array ومعايرة المتجهات (Normalization)
     embeddings_matrix = np.array(response.embeddings)
-    # Norm / Normalization لحساب Cosine Similarity مباشرة عبر ضرب المصفوفات
     patterns_embeddings = embeddings_matrix / np.linalg.norm(embeddings_matrix, axis=1, keepdims=True)
-    print("تم التجهيز والربط بنجاح!")
+    print("تم تجهيز متجهات الـ patterns بنجاح!")
 
-# تشغيل التحضير عند إقلاع التطبيق
+# تشغيل عملية حساب المتجهات مسبقاً عند بدء إقلاع التطبيق
 load_and_embed_intents()
 
 @cl.on_message
 async def main(message: cl.Message):
     user_text = message.content
     
-    # تحويل رسالة المستخدم عبر API
+    # تحويل نص المستخدم إلى متجه عبر API
     user_response = co.embed(
         texts=[user_text],
-        model="embed-arabic-v3.0",
+        model="embed-multilingual-v3.0",
         input_type="search_query"
     )
     
@@ -68,7 +67,7 @@ async def main(message: cl.Message):
     best_match_idx = np.argmax(similarities)
     best_score = similarities[best_match_idx]
     
-    # عتبة الثقة (نموذج Cohere يعطي نواتج دقيقة، 0.40 عتبة ممتازة لهذا النموذج)
+    # عتبة الثقة (Threshold)
     THRESHOLD = 0.40
     
     if best_score >= THRESHOLD:
