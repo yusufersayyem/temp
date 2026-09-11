@@ -1,14 +1,30 @@
+import os
 import json
 import random
+import requests
 import numpy as np
 import chainlit as cl
-from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# استخدام نموذج مصغر وفعال لتوفير الـ RAM على Render
-embedder = SentenceTransformer('paraphrase-MiniLM-L3-v2')
+# 1. إعداد رابط النموذج ومفتاح API
+# نستخدم نموذج خفيف وسريع يدعم اللغة العربية
+API_URL = "https://api-inference.huggingface.co/models/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
-# تحميل الملفات وتحضير التضمينات
+# جلب المفتاح من متغيرات البيئة (Environment Variables)
+HF_TOKEN = os.getenv("HF_TOKEN")
+headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+
+def query_embedding(texts):
+    """دالة لإرسال النصوص لـ Hugging Face واستلام الـ Embeddings"""
+    payload = {"inputs": texts, "options": {"wait_for_model": True}}
+    response = requests.post(API_URL, headers=headers, json=payload)
+    
+    if response.status_code == 200:
+        return np.array(response.json())
+    else:
+        raise Exception(f"خطأ في API: {response.status_code} - {response.text}")
+
+# 2. تحميل البيانات وتجهيز الأسئلة
 with open('intents.json', 'r', encoding='utf-8') as f:
     intents = json.load(f)
 
@@ -20,8 +36,11 @@ for intent in intents['intents']:
         patterns.append(pattern)
         pattern_tags.append(intent['tag'])
 
-# حساب التضمينات مرة واحدة عند بدء التشغيل
-patterns_embeddings = embedder.encode(patterns, convert_to_numpy=True)
+# 3. حساب التضمينات للأنماط المجهزة عند بدء التشغيل
+try:
+    patterns_embeddings = query_embedding(patterns)
+except Exception as e:
+    print(f"حدث خطأ أثناء تحميل التضمينات الأولية: {e}")
 
 def get_response_by_tag(tag):
     for intent in intents['intents']:
@@ -36,15 +55,22 @@ async def start():
 @cl.on_message
 async def main(message: cl.Message):
     user_text = message.content.strip()
-    user_embedding = embedder.encode([user_text], convert_to_numpy=True)
 
-    similarities = cosine_similarity(user_embedding, patterns_embeddings)[0]
-    best_match_idx = np.argmax(similarities)
-    best_score = similarities[best_match_idx]
+    try:
+        # تحويل نص المستخدم إلى Embedding عبر الـ API
+        user_embedding = query_embedding([user_text])
 
-    if best_score < 0.55:
-        response = "عذراً، لم أفهم ما تقصده بوضوح. هل يمكنك إعادة الصياغة؟"
-    else:
-        response = get_response_by_tag(pattern_tags[best_match_idx])
+        # حساب جيب تمام التشابه (Cosine Similarity)
+        similarities = cosine_similarity(user_embedding, patterns_embeddings)[0]
+        best_match_idx = np.argmax(similarities)
+        best_score = similarities[best_match_idx]
+
+        if best_score < 0.60:
+            response = "عذراً، لم أفهم ما تقصده بوضوح. هل يمكنك إعادة الصياغة؟"
+        else:
+            response = get_response_by_tag(pattern_tags[best_match_idx])
+
+    except Exception as e:
+        response = "حدث خطأ أثناء التواصل مع خادم الذكاء الاصطناعي، يرجى المحاولة لاحقاً."
 
     await cl.Message(content=response).send()
