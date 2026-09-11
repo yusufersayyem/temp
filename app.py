@@ -14,7 +14,7 @@ patterns_list = []
 intents_mapping = []
 patterns_embeddings = None
 
-def load_and_embed_intents(json_path="intent.json"):
+def load_and_embed_intents(json_path="intents.json"):
     global patterns_list, intents_mapping, patterns_embeddings
     
     with open(json_path, "r", encoding="utf-8") as f:
