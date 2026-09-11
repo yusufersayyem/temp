@@ -1,56 +1,64 @@
 import json
 import random
-import re
+import numpy as np
 import chainlit as cl
-import joblib
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 
-# 1. دالة معالجة وتطبيع النص العربي
-def normalize_arabic(text):
-    text = re.sub(r'[\u064B-\u0652]', '', text)  # إزالة التشكيل
-    text = re.sub(r'[إأآا]', 'ا', text)           # توحيد الألف
-    text = re.sub(r'ى', 'ي', text)              # توحيد الياء
-    text = re.sub(r'ؤ', 'ء', text)
-    text = re.sub(r'ئ', 'ء', text)
-    text = re.sub(r'ة', 'ه', text)              # توحيد التاء المربوطة
-    return text.strip()
+# 1. تحميل نموذج التضمين متعدد اللغات (يدعم العربية بجودة عالية)
+embedder = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
 
-# 2. تحميل النموذج والملفات (استخدام joblib بدلاً من pickle)
-try:
-    model = joblib.load('model.joblib')
-except Exception:
-    import pickle
-    with open('model.pkl', 'rb') as f:
-        model = pickle.load(f)
-
+# 2. تحميل ملف Intents
 with open('intents.json', 'r', encoding='utf-8') as f:
     intents = json.load(f)
 
-def get_response(predicted_tag):
+# 3. تجهيز بيانات التدريب وتحويل الأنماط إلى Embeddings
+patterns = []       # قائمة تحتوي على جميع الأسئلة/الأنماط
+pattern_tags = []   # التصنيف المقابل لكل سؤال
+
+for intent in intents['intents']:
+    for pattern in intent['patterns']:
+        patterns.append(pattern)
+        pattern_tags.append(intent['tag'])
+
+# تحويل كافة الأنماط إلى Embeddings وتخزينها في الذاكرة
+patterns_embeddings = embedder.encode(patterns, convert_to_numpy=True)
+
+
+def get_response_by_tag(tag):
+    """جلب رد عشوائي للنية المحددة"""
     for intent in intents['intents']:
-        if intent['tag'] == predicted_tag:
+        if intent['tag'] == tag:
             return random.choice(intent['responses'])
     return "عذراً، لم أفهم ما تقصده."
 
+
 @cl.on_chat_start
 async def start():
-    await cl.Message(content="أهلاً بك! كيف يمكنني مساعدتك اليوم؟").send()
+    await cl.Message(content="أهلاً بك! أنا أعمل الآن بالذكاء الاصطناعي والدلالة اللفظية. كيف يمكنني مساعدتك؟").send()
+
 
 @cl.on_message
 async def main(message: cl.Message):
-    # معالجة النص المدخل
-    cleaned_text = normalize_arabic(message.content)
-    
-    # حساب الاحتمالات لجميع الفئات
-    probabilities = model.predict_proba([cleaned_text])[0]
-    max_prob = max(probabilities)
-    predicted_tag = model.classes_[probabilities.argmax()]
-    
-    # وضع حد أدنى لدرجة الثقة (مثلاً 40%)
-    CONFIDENCE_THRESHOLD = 0.40
-    
-    if max_prob < CONFIDENCE_THRESHOLD:
+    user_text = message.content.strip()
+
+    # تحويل نص المستخدم إلى Embedding
+    user_embedding = embedder.encode([user_text], convert_to_numpy=True)
+
+    # حساب جيب تمام التشابه (Cosine Similarity) بين نص المستخدم والأنماط المخزنة
+    similarities = cosine_similarity(user_embedding, patterns_embeddings)[0]
+
+    # معرفة أعلى درجة تشابه والمؤشر الخاص بها
+    best_match_idx = np.argmax(similarities)
+    best_score = similarities[best_match_idx]
+    predicted_tag = pattern_tags[best_match_idx]
+
+    # تحديد حد أدنى للقبول (Threshold)
+    SIMILARITY_THRESHOLD = 0.60
+
+    if best_score < SIMILARITY_THRESHOLD:
         response = "عذراً، لم أفهم ما تقصده بوضوح. هل يمكنك إعادة الصياغة؟"
     else:
-        response = get_response(predicted_tag)
-    
+        response = get_response_by_tag(predicted_tag)
+
     await cl.Message(content=response).send()
