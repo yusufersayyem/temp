@@ -1,4 +1,3 @@
 chainlit
-requests
-scikit-learn
+cohere
 numpy
