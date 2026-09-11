@@ -1,16 +1,30 @@
 import json
-import pickle
 import random
+import re
 import chainlit as cl
+import joblib
 
-# تحميل النموذج وحمولة الـ JSON عند بدء التشغيل
-with open('model.pkl', 'rb') as f:
-    model = pickle.load(f)
+# 1. دالة معالجة وتطبيع النص العربي
+def normalize_arabic(text):
+    text = re.sub(r'[\u064B-\u0652]', '', text)  # إزالة التشكيل
+    text = re.sub(r'[إأآا]', 'ا', text)           # توحيد الألف
+    text = re.sub(r'ى', 'ي', text)              # توحيد الياء
+    text = re.sub(r'ؤ', 'ء', text)
+    text = re.sub(r'ئ', 'ء', text)
+    text = re.sub(r'ة', 'ه', text)              # توحيد التاء المربوطة
+    return text.strip()
+
+# 2. تحميل النموذج والملفات (استخدام joblib بدلاً من pickle)
+try:
+    model = joblib.load('model.joblib')
+except Exception:
+    import pickle
+    with open('model.pkl', 'rb') as f:
+        model = pickle.load(f)
 
 with open('intents.json', 'r', encoding='utf-8') as f:
     intents = json.load(f)
 
-# دالة للحصول على الرد بناءً على الـ tag المتوقع
 def get_response(predicted_tag):
     for intent in intents['intents']:
         if intent['tag'] == predicted_tag:
@@ -23,12 +37,20 @@ async def start():
 
 @cl.on_message
 async def main(message: cl.Message):
-    user_text = message.content.strip()
+    # معالجة النص المدخل
+    cleaned_text = normalize_arabic(message.content)
     
-    # التنبؤ بالـ tag
-    predicted_tag = model.predict([user_text])[0]
+    # حساب الاحتمالات لجميع الفئات
+    probabilities = model.predict_proba([cleaned_text])[0]
+    max_prob = max(probabilities)
+    predicted_tag = model.classes_[probabilities.argmax()]
     
-    # جلب الرد
-    response = get_response(predicted_tag)
+    # وضع حد أدنى لدرجة الثقة (مثلاً 40%)
+    CONFIDENCE_THRESHOLD = 0.40
+    
+    if max_prob < CONFIDENCE_THRESHOLD:
+        response = "عذراً، لم أفهم ما تقصده بوضوح. هل يمكنك إعادة الصياغة؟"
+    else:
+        response = get_response(predicted_tag)
     
     await cl.Message(content=response).send()
