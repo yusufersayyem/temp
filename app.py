@@ -5,11 +5,9 @@ import cohere
 import numpy as np
 import chainlit as cl
 
-# 1. تهيئة عميل Cohere باستخدام مفتاح البيئة
 COHERE_API_KEY = os.environ.get("COHERE_API_KEY")
 co = cohere.Client(COHERE_API_KEY)
 
-# متغيرات التخزين
 patterns_list = []
 intents_mapping = []
 patterns_embeddings = None
@@ -23,35 +21,34 @@ def load_and_embed_intents(json_path="intents.json"):
     for intent in data["intents"]:
         tag = intent["tag"]
         responses = intent["responses"]
+        # جلب مسار الصورة إن وجد
+        image_path = intent.get("image", None)
+        
         for pattern in intent["patterns"]:
             patterns_list.append(pattern)
             intents_mapping.append({
                 "tag": tag,
-                "responses": responses
+                "responses": responses,
+                "image": image_path
             })
             
     print("جاري استدعاء Cohere API لحساب متجهات الـ patterns...")
-    
-    # استخدام النموذج المتعدد اللغات المعتمد ليدعم العربية بدقة عالية
     response = co.embed(
         texts=patterns_list,
         model="embed-multilingual-v3.0",
         input_type="search_document"
     )
     
-    # تحويل النتيجة إلى NumPy Array ومعايرة المتجهات (Normalization)
     embeddings_matrix = np.array(response.embeddings)
     patterns_embeddings = embeddings_matrix / np.linalg.norm(embeddings_matrix, axis=1, keepdims=True)
     print("تم تجهيز متجهات الـ patterns بنجاح!")
 
-# تشغيل عملية حساب المتجهات مسبقاً عند بدء إقلاع التطبيق
 load_and_embed_intents()
 
 @cl.on_message
 async def main(message: cl.Message):
     user_text = message.content
     
-    # تحويل نص المستخدم إلى متجه عبر API
     user_response = co.embed(
         texts=[user_text],
         model="embed-multilingual-v3.0",
@@ -61,19 +58,30 @@ async def main(message: cl.Message):
     user_embedding = np.array(user_response.embeddings[0])
     user_embedding = user_embedding / np.linalg.norm(user_embedding)
     
-    # حساب التشابه الدلالي (Cosine Similarity)
     similarities = np.dot(patterns_embeddings, user_embedding)
-    
     best_match_idx = np.argmax(similarities)
     best_score = similarities[best_match_idx]
     
-    # عتبة الثقة (Threshold)
     THRESHOLD = 0.40
+    elements = []
     
     if best_score >= THRESHOLD:
         matched_intent = intents_mapping[best_match_idx]
         selected_response = random.choice(matched_intent["responses"])
+        
+        # التأكد من وجود صورة مرافقة للـ Intent
+        image_path = matched_intent.get("image")
+        if image_path:
+            # إذا كان الرابط أونلاين استخدم url، وإذا كان محلياً استخدم path
+            if image_path.startswith("http"):
+                elements.append(
+                    cl.Image(name="intent_image", url=image_path, display="inline")
+                )
+            elif os.path.exists(image_path):
+                elements.append(
+                    cl.Image(name="intent_image", path=image_path, display="inline")
+                )
     else:
         selected_response = "عذراً، لم أفهم قصدك بوضوح. هل يمكنك إعادة الصياغة؟"
         
-    await cl.Message(content=selected_response).send()
+    await cl.Message(content=selected_response, elements=elements).send()
