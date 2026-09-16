@@ -14,7 +14,8 @@
       ],
       "responses": [
         "مرحبا كيف يمكنني مساعدتك."
-      ]
+      ],
+		"image": "images/X.JPEG"
     },
     {
       "tag": "thanks",
