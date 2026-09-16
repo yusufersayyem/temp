@@ -13,9 +13,9 @@
         "تحياتي"
       ],
       "responses": [
-        "مرحبا كيف يمكنني مساعدتك."
+        "مرحبا كيف يمكنني مساعدتك.",
+		"image:images/X.jpg"
       ],
-		"image": "images/X.jpg"
     },
     {
       "tag": "thanks",
