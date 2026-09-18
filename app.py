@@ -28,7 +28,7 @@ ADS_LIST = [
     },
     {
         "title": "جامعة النور تعلن عن تخفيضات لكوادر التربية ",
-        "image_url": "https://alnoor.edu.iq/ar/?text=Ad+3",
+        "image_url": "https://ik.imagekit.io/63rncvror/ad10.webp?updatedAt=1785601362911?text=Ad+3",
         "link": "https://alnoor.edu.iq/ar"
     }
 ]
