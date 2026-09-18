@@ -24,12 +24,12 @@ ADS_LIST = [
     {
         "title": "مطعم خطار الموصل تخفيضات موسمية 15%",
         "image_url": "https://ik.imagekit.io/63rncvror/ad1.webp?updatedAt=1785601369756?text=Ad+2",
-        "link": "https://www.facebook.com/khutarrest/ad2"
+        "link": "https://www.facebook.com/khutarrest"
     },
     {
         "title": "جامعة النور تعلن عن تخفيضات لكوادر التربية ",
         "image_url": "https://alnoor.edu.iq/ar/?text=Ad+3",
-        "link": "https://alnoor.edu.iq/ar/ad3"
+        "link": "https://alnoor.edu.iq/ar"
     }
 ]
 
