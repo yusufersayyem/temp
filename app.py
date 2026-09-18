@@ -2,17 +2,17 @@
 ADS_LIST = [
     {
         "title": "📢 إعلان: خصم 20% على الدورات البرمجية!",
-        "image_url": "https://ik.imagekit.io/63rncvror/ad10.webp?updatedAt=1785601362911?text=Ad+1",
+        "image_url": "https://via.placeholder.com/600x200?text=Ad+1",
         "link": "https://example.com/ad1"
     },
     {
         "title": "🚀 إعلان: استضف مشاريعك بسهولة مع خدماتنا السحابية!",
-        "image_url": "https://ik.imagekit.io/63rncvror/ad5.webp?updatedAt=1785601364212?text=Ad+2",
+        "image_url": "https://via.placeholder.com/600x200?text=Ad+2",
         "link": "https://example.com/ad2"
     },
     {
         "title": "💡 إعلان: اشترك الآن في النشرة البرمجية اليومية!",
-        "image_url": "https://ik.imagekit.io/63rncvror/ad6.webp?updatedAt=1785601370285?text=Ad+3",
+        "image_url": "https://via.placeholder.com/600x200?text=Ad+3",
         "link": "https://example.com/ad3"
     }
 ]
