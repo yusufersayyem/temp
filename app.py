@@ -19,17 +19,17 @@ ADS_LIST = [
     {
         "title": "📢 إعلان: خصم 20% على الدورات البرمجية!",
         "image_url": "https://ik.imagekit.io/63rncvror/ad5.webp?updatedAt=1785601364212?text=Ad+1",
-        "link": "https://example.com/ad1"
+        "link": "https://www.asiacell.com/personal?gad_source=1&gad_campaignid=21900349889&gbraid=0AAAAAoo1Wz1oagyMn1KP-g_RQLeaW-yb7&gclid=CjwKCAjwwrPVBhA1EiwAv_YO-cQk6fBJf1TLInMbzA-1fWCHzq0GL8DtuqSP1Bs71KL7HDBh9LeT5hoCDOoQAvD_BwE/ad1"
     },
     {
-        "title": "🚀 إعلان: استضف مشاريعك بسهولة مع خدماتنا السحابية!",
-        "image_url": "https://via.placeholder.com/600x200?text=Ad+2",
-        "link": "https://example.com/ad2"
+        "title": "مطعم خطار الموصل تخفيضات موسمية 15%",
+        "image_url": "https://ik.imagekit.io/63rncvror/ad1.webp?updatedAt=1785601369756?text=Ad+2",
+        "link": "https://www.facebook.com/khutarrest/ad2"
     },
     {
-        "title": "💡 إعلان: اشترك الآن في النشرة البرمجية اليومية!",
-        "image_url": "https://via.placeholder.com/600x200?text=Ad+3",
-        "link": "https://example.com/ad3"
+        "title": "جامعة النور تعلن عن تخفيضات لكوادر التربية ",
+        "image_url": "https://alnoor.edu.iq/ar/?text=Ad+3",
+        "link": "https://alnoor.edu.iq/ar/ad3"
     }
 ]
 
