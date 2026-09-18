@@ -1,0 +1,27 @@
+/* ضبط اتجاه الصفحة بالكامل من اليمين إلى اليسار */
+body, html, #root {
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+/* ضبط حقل الإدخال ليكون من اليمين إلى اليسار */
+textarea, input {
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+/* ضبط محاذاة نصوص المحادثة ورسائل البوت والمستخدم */
+.cl-message-content {
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+/* محاذاة قائمة الخيارات والشريط الجانبي إن وجد */
+.MuiDrawer-paper, .MuiBox-root {
+    direction: rtl !important;
+}
+
+/* تعديل أيقونات الإرسال لتبدو متناسقة مع اتجاه اليمين */
+button[type="submit"] svg {
+    transform: rotate(180deg);
+}
