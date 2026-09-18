@@ -19,7 +19,7 @@ ADS_LIST = [
     {
         "title": "📢 إعلان: خصم 20% على الدورات البرمجية!",
         "image_url": "https://ik.imagekit.io/63rncvror/ad5.webp?updatedAt=1785601364212?text=Ad+1",
-        "link": "https://www.asiacell.com/personal?gad_source=1&gad_campaignid=21900349889&gbraid=0AAAAAoo1Wz1oagyMn1KP-g_RQLeaW-yb7&gclid=CjwKCAjwwrPVBhA1EiwAv_YO-cQk6fBJf1TLInMbzA-1fWCHzq0GL8DtuqSP1Bs71KL7HDBh9LeT5hoCDOoQAvD_BwE/ad1"
+        "link": "https://www.asiacell.com/personal?gad_source=1&gad_campaignid=21900349889&gbraid=0AAAAAoo1Wz1oagyMn1KP-g_RQLeaW-yb7&gclid=CjwKCAjwwrPVBhA1EiwAv_YO-cQk6fBJf1TLInMbzA-1fWCHzq0GL8DtuqSP1Bs71KL7HDBh9LeT5hoCDOoQAvD_BwE"
     },
     {
         "title": "مطعم خطار الموصل تخفيضات موسمية 15%",
