@@ -3404,6 +3404,18 @@
     "https://www.facebook.com/share/14yMTz9nn9w/"
   ]
       },
+	  {
+  "tag": "research_sabbatical_form_ninawa",
+  "patterns": [
+    "ما هي استمارة التفرغ البحثي لحملة الشهادات العليا في تربية نينوى؟",
+    "رابط استمارة التفرغ البحثي تربية نينوى",
+    "كيف احصل على استمارة التفرغ البحثي لحملة الشهادات العليا؟",
+    "نموذج استمارة التفرغ البحثي تربية نينوى"
+  ],
+  "responses": [
+    "الاستمارة موجودة في الرابط التالي:\nhttps://drive.google.com/file/d/1NvLiNAhyMD9_3yYuWXXd3cRS1xFjf2mK/view?usp=sharing"
+  ]
+      },
 	{
   "tag": "full_time_caretaker_leave_deductions",
   "patterns": [
