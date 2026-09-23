@@ -1,15 +1,16 @@
 import json
 import os
 import random
+import requests
 import chainlit as cl
-from huggingface_hub import InferenceClient
 import numpy as np
 
-# 1. تهيئة عميل Hugging Face
+# 1. إعداد مفتاح API واسم النموذج
 HF_TOKEN = os.environ.get("HF_TOKEN")
-client = InferenceClient(token=HF_TOKEN)
-
 MODEL_NAME = "intfloat/multilingual-e5-small"
+API_URL = f"https://api-inference.huggingface.co/pipeline/feature-extraction/{MODEL_NAME}"
+
+HEADERS = {"Authorization": f"Bearer {HF_TOKEN}"} if HF_TOKEN else {}
 
 # متغيرات التخزين
 patterns_list = []
@@ -18,17 +19,18 @@ patterns_embeddings = None
 
 
 def get_embeddings_from_hf(texts):
-    """دالة مساعدة لاستدعاء Hugging Face Inference API وتوليد المتجهات"""
-    # استخدام feature_extraction بشكل مباشر عبر طلب POST يتفادى مشكلة Task Mapping
-    response = client.post(
-        json={"inputs": texts},
-        model=MODEL_NAME,
-        task="feature-extraction"
+    """دالة مساعدة لاستدعاء Hugging Face Inference API مباشرة عبر requests"""
+    response = requests.post(
+        API_URL,
+        headers=HEADERS,
+        json={"inputs": texts, "options": {"wait_for_model": True}}
     )
     
-    # تحويل الاستجابة من JSON (bytes) إلى numpy array
-    import json
-    embeddings = np.array(json.loads(response.decode("utf-8")))
+    # التأكد من نجاح الطلب
+    if response.status_code != 200:
+        raise RuntimeError(f"Hugging Face API Error ({response.status_code}): {response.text}")
+
+    embeddings = np.array(response.json())
 
     # إذا تم إرسال نص واحد، نتأكد من إرجاع مصفوفة ثنائية الأبعاد
     if len(embeddings.shape) == 1:
@@ -36,6 +38,8 @@ def get_embeddings_from_hf(texts):
 
     # معايرة المتجهات (Normalization) لحساب Cosine Similarity مباشرة عبر Dot Product
     norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+    # تفادي القسمة على صفر في حال وجود مصفوفات فارغة
+    norms[norms == 0] = 1e-10
     return embeddings / norms
 
 
