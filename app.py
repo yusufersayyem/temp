@@ -5,8 +5,7 @@ import chainlit as cl
 from huggingface_hub import InferenceClient
 import numpy as np
 
-# 1. تهيئة عميل Hugging Face باستخدام التوكن الخاص بك
-# يجب إضافة HF_TOKEN في متغيرات البيئة Environment Variables على Render
+# 1. تهيئة عميل Hugging Face
 HF_TOKEN = os.environ.get("HF_TOKEN")
 client = InferenceClient(token=HF_TOKEN)
 
@@ -20,9 +19,16 @@ patterns_embeddings = None
 
 def get_embeddings_from_hf(texts):
     """دالة مساعدة لاستدعاء Hugging Face Inference API وتوليد المتجهات"""
-    # استدعاء feature_extraction من مكتبة huggingface_hub
-    response = client.feature_extraction(texts, model=MODEL_NAME)
-    embeddings = np.array(response)
+    # استخدام feature_extraction بشكل مباشر عبر طلب POST يتفادى مشكلة Task Mapping
+    response = client.post(
+        json={"inputs": texts},
+        model=MODEL_NAME,
+        task="feature-extraction"
+    )
+    
+    # تحويل الاستجابة من JSON (bytes) إلى numpy array
+    import json
+    embeddings = np.array(json.loads(response.decode("utf-8")))
 
     # إذا تم إرسال نص واحد، نتأكد من إرجاع مصفوفة ثنائية الأبعاد
     if len(embeddings.shape) == 1:
@@ -76,7 +82,7 @@ async def main(message: cl.Message):
     best_match_idx = np.argmax(similarities)
     best_score = similarities[best_match_idx]
 
-    # عتبة الثقة (تعديل القيمة بما يتناسب مع نتايج E5)
+    # عتبة الثقة (تعديل القيمة بما يتناسب مع نتائج E5)
     THRESHOLD = 0.80
 
     if best_score >= THRESHOLD:
