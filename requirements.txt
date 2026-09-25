@@ -1,3 +1,4 @@
 chainlit
 numpy
 scikit-learn
+requests
