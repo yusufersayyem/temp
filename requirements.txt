@@ -1,0 +1,3 @@
+chainlit
+numpy
+scikit-learn
