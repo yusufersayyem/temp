@@ -29,8 +29,8 @@ ADS = [
     },
     {
         "title": "تقييمك يهمنا لتطوير الخدمة",
-        "image_url": "https://https://ik.imagekit.io/63rncvror/ad5.webp?updatedAt=1785601364212?random=5",
-        "target_url": "https://example.com/feedback"
+        "image_url": "https://ik.imagekit.io/63rncvror/ad5.webp?updatedAt=1785601364212?random=5",
+        "target_url": "https://www.asiacell.com/personal?gad_source=1&gad_campaignid=21900349889&gbraid=0AAAAAoo1Wz11yBTnlEw-9ZZxIQFMgUlc_&gclid=Cj0KCQjwt9jVBhDXARIsAFSP-6ciCW97T0hiPO05eme6HEMg4CmJ-g83yWTHkh_Q0tfxeJjaFSc18NcaAgoXEALw_wcB"
     }
 ]
 
