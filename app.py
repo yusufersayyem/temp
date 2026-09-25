@@ -29,7 +29,8 @@ ADS = [
     },
     {
         "title": "تواصل معنا مباشرة عبر الواتساب للاعلان على البرنامج",
-        "image_url": "https://ik.imagekit.io/63rncvror/ads.jpg?random=5"
+        "image_url": "https://ik.imagekit.io/63rncvror/ads.jpg?random=5",
+        "target_url": "https://web.whatsapp.com/"
     }
 ]
 
