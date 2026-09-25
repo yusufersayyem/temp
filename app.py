@@ -9,7 +9,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 ADS = [
     {
         "title": "معهد لارسا النموذجي - خصم 20% على جميع الدورات!",
-        "image_url": "https://ik.imagekit.io/63rncvror/ad6.webp?updatedAt=1785601370285?random=1",  # استبدل هذا برابط صورتك أو مسارها المحلي مثل "ads/ad1.jpg"
+        "image_url": "https://ik.imagekit.io/63rncvror/ad6.webp?updatedAt=1785601370285?random=1",
         "target_url": "https://www.facebook.com/larsafoundation/"
     },
     {
@@ -24,7 +24,7 @@ ADS = [
     },
     {
         "title": "تواصل معنا مباشرة عبر الواتساب للاعلان على البرنامج",
-        "image_url": "https://ik.imagekit.io/63rncvror/ads.jpg?random=5",
+        "image_url": "https://ik.imagekit.io/63rncvror/ads.jpg?random=4",
         "target_url": "https://web.whatsapp.com/"
     }
 ]
