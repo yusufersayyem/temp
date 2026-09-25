@@ -1,0 +1,7 @@
+/* إزالة الفراغات والحدود الرمادية وتمديد صورة الإعلان بكامل العرض */
+.element-image img {
+    width: 100% !important;
+    max-height: 400px !important;
+    object-fit: cover !important;
+    border-radius: 8px !important;
+}
