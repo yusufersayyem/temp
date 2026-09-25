@@ -5,32 +5,32 @@ import chainlit as cl
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# قائمة الإعلانات (روابط صور مع عنوان ورابط عند الضغط)
+# قائمة الإعلانات (يمكن استخدام مسار محلي local path أو رابط URL مباشر للصورة)
 ADS = [
     {
-        "title": "خصم 20% على جميع الدورات!",
-        "image_url": "https://ik.imagekit.io/63rncvror/ad6.webp?updatedAt=1785601370285?random=1",
-        "target_url": "https://example.com/offer1"
+        "title": "معهد لارسا النموذجي - خصم 20% على جميع الدورات!",
+        "image_url": "https://picsum.photos/1200/600?random=1",  # استبدل هذا برابط صورتك أو مسارها المحلي مثل "ads/ad1.jpg"
+        "target_url": "https://example.com/larsa-offer"
     },
     {
-        "title": "اشترك في نشرتنا البريدية لتصلك أحدث الأخبار",
-        "image_url": "https://ik.imagekit.io/63rncvror/ad7.webp?updatedAt=1785601364077?random=2",
-        "target_url": "https://example.com/newsletter"
+        "title": "اشترك في دوراتنا القادمة واحصل على شهادة معتمدة",
+        "image_url": "https://picsum.photos/1200/600?random=2",
+        "target_url": "https://example.com/courses"
     },
     {
-        "title": "حمل تطبيقنا الجديد الآن",
-        "image_url": "https://ik.imagekit.io/63rncvror/ad10.webp?updatedAt=1785601362911?random=3",
+        "title": "حمل تطبيقنا الجديد للوصول إلى كافة الدروس",
+        "image_url": "https://picsum.photos/1200/600?random=3",
         "target_url": "https://example.com/app"
     },
     {
-        "title": "شارك البوت مع أصدقائك واحصل على مكافآت",
-        "image_url": "https://ik.imagekit.io/63rncvror/ad3.webp?updatedAt=1785601369079?random=4",
+        "title": "شارك البوت مع أصدقائك واحصل على خصم خاص",
+        "image_url": "https://picsum.photos/1200/600?random=4",
         "target_url": "https://example.com/share"
     },
     {
-        "title": "تقييمك يهمنا لتطوير الخدمة",
-        "image_url": "https://ik.imagekit.io/63rncvror/ad5.webp?updatedAt=1785601364212?random=5",
-        "target_url": "https://www.asiacell.com/personal?gad_source=1&gad_campaignid=21900349889&gbraid=0AAAAAoo1Wz11yBTnlEw-9ZZxIQFMgUlc_&gclid=Cj0KCQjwt9jVBhDXARIsAFSP-6ciCW97T0hiPO05eme6HEMg4CmJ-g83yWTHkh_Q0tfxeJjaFSc18NcaAgoXEALw_wcB"
+        "title": "تواصل معنا مباشرة عبر الواتساب للاستفسار",
+        "image_url": "https://picsum.photos/1200/600?random=5",
+        "target_url": "https://example.com/contact"
     }
 ]
 
@@ -100,7 +100,7 @@ async def on_chat_start():
 
 @cl.on_message
 async def main(message: cl.Message):
-    # زيادة العداد لكل استعلام من المستخدم
+    # زيادة عداد الاستعلامات للمستخدم
     query_count = cl.user_session.get("query_count", 0) + 1
     cl.user_session.set("query_count", query_count)
 
@@ -124,21 +124,28 @@ async def main(message: cl.Message):
     else:
         selected_response = "عذراً، لم أفهم قصدك بوضوح. هل يمكنك إعادة صياغة السؤال؟"
         
-    # إظهار الإعلان عند كل ثالث استعلام
+    # عرض الإعلان عند كل ثالث استعلام
     if query_count % 3 == 0:
         ad_index = cl.user_session.get("ad_index", 0)
         ad = ADS[ad_index]
         
-        # تنسيق الصورة ورابط الضغط بأسلوب Markdown:
-        # [![نص بديل](رابط الصورة)](رابط التوجيه)
-        ad_markdown = f"\n\n---\n📢 **إعلان**\n[{ad['title']}]({ad['target_url']})\n\n[![{ad['title']}]({ad['image_url']})]({ad['target_url']})"
+        # إنشاء عنصر الصورة المباشر من Chainlit
+        image_element = cl.Image(
+            url=ad["image_url"],  # أو استخدم path="path/to/image.jpg" للصور المحلية
+            name=ad["title"],
+            display="inline",
+            size="large"
+        )
         
-        full_response = f"{selected_response}{ad_markdown}"
+        # نص الإعلان مع رابط التوجيه عند الضغط
+        ad_text = f"\n\n---\n📢 **إعلان**\n[{ad['title']}]({ad['target_url']})"
+        full_response = f"{selected_response}{ad_text}"
+        
+        # إرسال الرسالة مع الصورة بدون الفراغات الجانبية
+        await cl.Message(content=full_response, elements=[image_element]).send()
         
         # التدوير للإعلان التالي
         next_ad_index = (ad_index + 1) % len(ADS)
         cl.user_session.set("ad_index", next_ad_index)
     else:
-        full_response = selected_response
-
-    await cl.Message(content=full_response).send()
+        await cl.Message(content=selected_response).send()
