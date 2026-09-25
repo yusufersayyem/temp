@@ -13,14 +13,14 @@ ADS = [
         "target_url": "https://www.facebook.com/larsafoundation/"
     },
     {
-        "title": "اشترك في دوراتنا القادمة واحصل على شهادة معتمدة",
-        "image_url": "https://picsum.photos/1200/600?random=2",
-        "target_url": "https://example.com/courses"
+        "title": "خصم خاص 20% لموظفي التربية",
+        "image_url": "https://ik.imagekit.io/63rncvror/ad1.webp?updatedAt=1785601369756?random=2",
+        "target_url": "https://www.facebook.com/khutarrest/?locale=ku_TR"
     },
     {
-        "title": "حمل تطبيقنا الجديد للوصول إلى كافة الدروس",
-        "image_url": "https://picsum.photos/1200/600?random=3",
-        "target_url": "https://example.com/app"
+        "title": "حمل تطبيقنا الجديد للوصول إلى كافة الخدمات",
+        "image_url": "https://ik.imagekit.io/63rncvror/ad5.webp?updatedAt=1785601364212?random=3",
+        "target_url": "https://www.asiacell.com/personal?gad_source=1&gad_campaignid=21900349889&gbraid=0AAAAAoo1Wz11yBTnlEw-9ZZxIQFMgUlc_&gclid=Cj0KCQjwt9jVBhDXARIsAFSP-6ercxBv9pDtXeaI8gIK-aKaBCsRCBRtigCYoQBavnMAWeKr9xoEETEaAi9iEALw_wcB"
     },
     {
         "title": "شارك البوت مع أصدقائك واحصل على خصم خاص",
