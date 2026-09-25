@@ -28,9 +28,8 @@ ADS = [
         "target_url": "https://example.com/share"
     },
     {
-        "title": "تواصل معنا مباشرة عبر الواتساب للاستفسار",
-        "image_url": "https://picsum.photos/1200/600?random=5",
-        "target_url": "https://example.com/contact"
+        "title": "تواصل معنا مباشرة عبر الواتساب للاعلان على البرنامج",
+        "image_url": "https://ik.imagekit.io/63rncvror/ads.jpg?random=5"
     }
 ]
 
