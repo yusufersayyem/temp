@@ -23,11 +23,6 @@ ADS = [
         "target_url": "https://www.asiacell.com/personal?gad_source=1&gad_campaignid=21900349889&gbraid=0AAAAAoo1Wz11yBTnlEw-9ZZxIQFMgUlc_&gclid=Cj0KCQjwt9jVBhDXARIsAFSP-6ercxBv9pDtXeaI8gIK-aKaBCsRCBRtigCYoQBavnMAWeKr9xoEETEaAi9iEALw_wcB"
     },
     {
-        "title": "شارك البوت مع أصدقائك واحصل على خصم خاص",
-        "image_url": "https://picsum.photos/1200/600?random=4",
-        "target_url": "https://example.com/share"
-    },
-    {
         "title": "تواصل معنا مباشرة عبر الواتساب للاعلان على البرنامج",
         "image_url": "https://ik.imagekit.io/63rncvror/ads.jpg?random=5",
         "target_url": "https://web.whatsapp.com/"
