@@ -3485,6 +3485,43 @@
   "responses": [
     "عند منح موظفي التربية من حاملي الشهادات العليا إجازة المعين المتفرغ، يتم استقطاع مخصصات النقل ومخصصات الخدمة الجامعية."
   ]
-  }
+  },
+	  {
+  "tag": "research_registration_requirements_ninawa",
+  "patterns": [
+    "ما هي متطلبات تسجيل البحث لحملة الشهادات العليا في تربية نينوى؟",
+    "كيفية تسجيل بحث لحملة الشهادات العليا تربية نينوى؟",
+    "ما هي استمارة ورابط تسجيل البحث في تربية نينوى؟",
+    "اجراءات تسجيل بحث في شعبة البحوث والدراسات التربوية"
+  ],
+  "responses": [
+    "1- الذهاب الى قسم الاعداد والتدريب/شعبة البحوث والدراسات التربوية\n2- ملء استمارة \"تسجيل بحث\" التالية:\nhttps://drive.google.com/file/d/1z7f6TjqkzNsVFu4uPEppw0THJKhF0fa4/view?usp=sharing\nالتسجيل الالكتروني:\nhttps://docs.google.com/forms/d/e/1FAIpQLSf91lNpgG_JX1BIw_wNPXowAKt76Ij2YTIOuWzHrchlULi8vg/viewform?usp=header"
+  ]
+       },
+	  {
+  "tag": "conference_research_registration_requirements_ninawa",
+  "patterns": [
+    "ما هي متطلبات تسجيل بحث مؤتمر لحملة الشهادات العليا في تربية نينوى؟",
+    "كيفية تسجيل بحث مؤتمر تربية نينوى؟",
+    "ما هي استمارة ورابط تسجيل بحث للمؤتمرات تربية نينوى؟",
+    "اجراءات تسجيل بحث مؤتمر في قسم الاعداد والتدريب"
+  ],
+  "responses": [
+    "1- الذهاب الى قسم الاعداد والتدريب/ شعبة البحوث والدراسات التربوية\n2- ملء استمارة \"تسجيل بحث مؤتمر\" التالية:\nhttps://drive.google.com/file/d/1tsZFLYhBbQUS6jV0Ac-FVoJmatQwIqUJ/view?usp=sharing\n3- التسجيل الالكتروني:\nhttps://docs.google.com/forms/d/e/1FAIpQLSdRSmSJ5TA3xCME5b51Etl9JlWNKs4xgH7SlHOcUF0d2JHc6g/viewform"
+  ]
+       },
+	  {
+  "tag": "authored_book_registration_requirements_ninawa",
+  "patterns": [
+    "ما هي متطلبات تسجيل كتاب مؤلف لحملة الشهادات العليا في تربية نينوى؟",
+    "كيفية تسجيل كتاب مؤلف تربية نينوى؟",
+    "ما هي استمارة ورابط تسجيل كتاب مؤلف في تربية نينوى؟",
+    "اجراءات تسجيل كتاب مؤلف في قسم الاعداد والتدريب"
+  ],
+  "responses": [
+    "1- الذهاب الى قسم الاعداد والتدريب/ شعبة البحوث والدراسات التربوية\n2- ملء استمارة \"تسجيل كتاب مؤلف\" التالية:\nhttps://drive.google.com/file/d/1uis0QROFlEMkTwpcMXQ_B6ygiL46h8bg/view?usp=sharing\n3- التسجيل الالكتروني:\nhttps://docs.google.com/forms/d/e/1FAIpQLSfyx3BPqWhWurZtbcoTQillTGozWNNRdgQOz8ZMiEg3yFjPhw/viewform"
+  ]
+      },
+	  
   ]
 }
