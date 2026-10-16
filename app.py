@@ -86,15 +86,19 @@ async def main(message: cl.Message):
     if best_score >= THRESHOLD:
         matched_intent = intents_mapping[best_match_idx]
         selected_response = random.choice(matched_intent["responses"])
-        image_path = matched_intent.get("image")
+        image_url = matched_intent.get("image")
         
-        # قائمة العناصر المراد إرسالها (نص + صورة إن وجدت)
         elements = []
-        if image_path:
-            # إذا كانت الصورة رابطاً خارجياً أو مساراً محلياً في مجلد المشروع
-            elements.append(
-                cl.Image(name="intent_image", path=image_path, display="inline")
-            )
+        if image_url:
+            # التحقق مما إذا كان الرابط يبدأ بـ http لتحديد ما إذا كان رابطاً خارجيئاً أو مساراً محلياً
+            if image_url.startswith("http://") or image_url.startswith("https://"):
+                elements.append(
+                    cl.Image(name="intent_image", url=image_url, display="inline")
+                )
+            else:
+                elements.append(
+                    cl.Image(name="intent_image", path=image_url, display="inline")
+                )
             
         await cl.Message(
             content=selected_response,
