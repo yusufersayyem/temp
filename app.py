@@ -13,7 +13,6 @@ RAW_ARABIC_STOP_WORDS = [
     "اريد", "أريد", "ممكن", "سمحت", "بالله", "عفوا", "الله", "بس", "يعني"
 ]
 
-# تنظيف الكلمات المستبعدة أولاً
 def basic_normalize(text):
     text = re.sub(r"[\u064B-\u0652]", "", text)  # إزالة التشكيل
     text = re.sub(r"[إأآا]", "ا", text)          # توحيد الألف
@@ -24,15 +23,10 @@ def basic_normalize(text):
 
 ARABIC_STOP_WORDS = set([basic_normalize(w) for w in RAW_ARABIC_STOP_WORDS if w])
 
-# 2. دالة تنظيف النص وإزالة الكلمات الزائدة
 def normalize_and_clean_arabic(text):
     text = basic_normalize(text)
-    
-    # حذف الكلمات المستبعدة يدوياً لضمان عملها مع char_wb
     words = text.split()
     filtered_words = [w for w in words if w not in ARABIC_STOP_WORDS]
-    
-    # إذا حُذفت كل الكلمات (مثلاً لو كتب المستخدم "من في") نرجع النص الأصلي المنظف
     result = " ".join(filtered_words)
     return result if result else text
 
@@ -50,15 +44,18 @@ def load_and_prepare_intents(json_path="intents.json"):
     for intent in data["intents"]:
         tag = intent["tag"]
         responses = intent["responses"]
+        # جلب رابط أو مسار الصورة إن وجد، وإلا نجعله None
+        image_path = intent.get("image", None)
+        
         for pattern in intent["patterns"]:
             clean_pattern = normalize_and_clean_arabic(pattern)
             patterns_list.append(clean_pattern)
             intents_mapping.append({
                 "tag": tag,
-                "responses": responses
+                "responses": responses,
+                "image": image_path
             })
             
-    # إعداد المحرك: ngram_range من (2, 4) يعطي مرونة أكبر مع العامية والأخطاء الإملائية
     vectorizer = TfidfVectorizer(
         analyzer="char_wb",
         ngram_range=(2, 4),
@@ -66,7 +63,7 @@ def load_and_prepare_intents(json_path="intents.json"):
     )
     
     tfidf_matrix = vectorizer.fit_transform(patterns_list)
-    print("تم إعداد محرك البحث النصي بنجاح!")
+    print("تم إعداد محرك البحث النصي مع دعم الصور بنجاح!")
 
 load_and_prepare_intents()
 
@@ -84,13 +81,26 @@ async def main(message: cl.Message):
     best_match_idx = similarities.argmax()
     best_score = similarities[best_match_idx]
     
-    # تعديل العتبة إلى 0.30 لضمان استجابة أفضل للأسئلة القصيرة جداً
     THRESHOLD = 0.30
     
     if best_score >= THRESHOLD:
         matched_intent = intents_mapping[best_match_idx]
         selected_response = random.choice(matched_intent["responses"])
+        image_path = matched_intent.get("image")
+        
+        # قائمة العناصر المراد إرسالها (نص + صورة إن وجدت)
+        elements = []
+        if image_path:
+            # إذا كانت الصورة رابطاً خارجياً أو مساراً محلياً في مجلد المشروع
+            elements.append(
+                cl.Image(name="intent_image", path=image_path, display="inline")
+            )
+            
+        await cl.Message(
+            content=selected_response,
+            elements=elements
+        ).send()
+        
     else:
         selected_response = "عذراً، لم أفهم قصدك بوضوح. هل يمكنك إعادة صياغة السؤال؟"
-        
-    await cl.Message(content=selected_response).send()
+        await cl.Message(content=selected_response).send()
